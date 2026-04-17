@@ -30,7 +30,7 @@ export const cactiData: CactusItem[] = [
     price: 1500,
     growType: "ไม้เมล็ด",
     description: "แอสโตรไฟตัม แอสทีเรียส หรือที่เรียกว่า 'ซีอุรชิน แคคตัส' เป็นกระบองเพชรที่มีลักษณะกลมแบน มีซี่โครง 8 ซี่ ลำต้นสีเขียวเข้ม มีจุดขาวกระจายอยู่ทั่ว เป็นกระบองเพชรที่หายากและเป็นที่นิยมสะสมอย่างมาก เหมาะสำหรับผู้ที่ชื่นชอบไม้แคคตัสหายาก",
-    images: { top: cactus1Top, side1: cactus1Side1, side2: cactus1Side2, side3: cactus1Side3 },
+    images: { top: cactus1Top.src, side1: cactus1Side1.src, side2: cactus1Side2.src, side3: cactus1Side3.src },
   },
   {
     id: "2",
@@ -40,7 +40,7 @@ export const cactiData: CactusItem[] = [
     price: 850,
     growType: "ไม้กราฟ",
     description: "ยิมโนคาลิเซียม มิฮาโนวิชิอาย เป็นกระบองเพชรขนาดเล็กที่มีลำต้นทรงกลม มีสีสันสวยงาม มักนิยมนำมากราฟกับตอเพื่อให้เจริญเติบโตได้ดี เป็นที่นิยมมากในหมู่นักสะสม",
-    images: { top: cactus2Top, side1: cactus2Side1, side2: cactus1Side2, side3: cactus1Side3 },
+    images: { top: cactus2Top.src, side1: cactus2Side1.src, side2: cactus1Side2.src, side3: cactus1Side3.src },
   },
   {
     id: "3",
@@ -50,7 +50,7 @@ export const cactiData: CactusItem[] = [
     price: 3500,
     growType: "ไม้เมล็ด",
     description: "โลโฟฟอรา วิลเลียมซิอาย หรือ 'เพโยเต้' เป็นกระบองเพชรที่ไม่มีหนาม มีลำต้นกลมแบนสีเขียวอมฟ้า ผิวเรียบ เจริญเติบโตช้า เป็นกระบองเพชรที่หายากและมีมูลค่าสูงมาก",
-    images: { top: cactus1Side3, side1: cactus1Top, side2: cactus2Top, side3: cactus1Side1 },
+    images: { top: cactus1Side3.src, side1: cactus1Top.src, side2: cactus2Top.src, side3: cactus1Side1.src },
   },
   {
     id: "4",
@@ -60,7 +60,7 @@ export const cactiData: CactusItem[] = [
     price: 5200,
     growType: "ไม้เมล็ด",
     description: "อะริโอคาร์ปัส เรทูซัส เป็นกระบองเพชรที่มีลักษณะเฉพาะตัวมาก มีใบรูปสามเหลี่ยมเรียงซ้อนกันเป็นดอกกุหลาบ เจริญเติบโตช้ามาก ต้องใช้เวลาหลายปีกว่าจะโตเต็มวัย",
-    images: { top: cactus1Side2, side1: cactus1Side3, side2: cactus2Side1, side3: cactus1Top },
+    images: { top: cactus1Side2.src, side1: cactus1Side3.src, side2: cactus2Side1.src, side3: cactus1Top.src },
   },
   {
     id: "5",
@@ -70,7 +70,7 @@ export const cactiData: CactusItem[] = [
     price: 2800,
     growType: "ไม้เมล็ด",
     description: "เทอร์บินิคาร์ปัส วัลเดเซียนัส เป็นกระบองเพชรขนาดจิ๋วที่มีหนามเป็นขนนกสวยงาม ดอกสีชมพูอมม่วง เป็นสายพันธุ์ที่หายากและใกล้สูญพันธุ์ในธรรมชาติ",
-    images: { top: cactus2Side1, side1: cactus2Top, side2: cactus1Side1, side3: cactus1Side2 },
+    images: { top: cactus2Side1.src, side1: cactus2Top.src, side2: cactus1Side1.src, side3: cactus1Side2.src },
   },
   {
     id: "6",
@@ -80,7 +80,7 @@ export const cactiData: CactusItem[] = [
     price: 4500,
     growType: "ไม้เมล็ด",
     description: "โคเปียโปอา ซิเนเรีย เป็นกระบองเพชรจากทะเลทรายชิลี มีลำต้นสีเทาเงินอมฟ้า ทนแล้งได้ดีเยี่ยม เจริญเติบโตช้า เป็นที่ต้องการอย่างมากในตลาดนักสะสม",
-    images: { top: cactus1Top, side1: cactus2Side1, side2: cactus1Side3, side3: cactus2Top },
+    images: { top: cactus1Top.src, side1: cactus2Side1.src, side2: cactus1Side3.src, side3: cactus2Top.src },
   },
 ];
 

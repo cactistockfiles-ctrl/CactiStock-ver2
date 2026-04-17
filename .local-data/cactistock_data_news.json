@@ -1,0 +1,13 @@
+[
+  {
+    "id": "news-1",
+    "title": "Spring Greenhouse Update",
+    "content": "Our spring collection is now available. We added rare lines and improved packaging flow for safer delivery.",
+    "coverImage": "/_next/static/media/cactus-1-top.0e0b0a0b.jpg",
+    "gallery": [
+      "/_next/static/media/cactus-1-side1.97e9e24c.jpg",
+      "/_next/static/media/cactus-1-side2.ae0c751e.jpg"
+    ],
+    "createdAt": "2026-03-19T00:00:00.000Z"
+  }
+]

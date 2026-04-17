@@ -1,0 +1,70 @@
+[
+  {
+    "id": "1",
+    "name": "Astrophytum asterias",
+    "family": "Astrophytum",
+    "sizeCm": 5,
+    "price": 1500,
+    "growType": "seed",
+    "description": "Rare flat cactus with distinct ribs and speckled body.",
+    "images": {
+      "top": "/_next/static/media/cactus-1-top.0e0b0a0b.jpg",
+      "side1": "/_next/static/media/cactus-1-side1.97e9e24c.jpg",
+      "side2": "/_next/static/media/cactus-1-side2.ae0c751e.jpg",
+      "side3": "/_next/static/media/cactus-1-side3.83b2e9aa.jpg"
+    },
+    "isSold": false,
+    "createdAt": "2026-03-19T00:00:00.000Z"
+  },
+  {
+    "id": "2",
+    "name": "Gymnocalycium mihanovichii",
+    "family": "Gymnocalycium",
+    "sizeCm": 4,
+    "price": 850,
+    "growType": "graft",
+    "description": "Compact and colorful species commonly used in grafting.",
+    "images": {
+      "top": "/_next/static/media/cactus-2-top.69b06200.jpg",
+      "side1": "/_next/static/media/cactus-2-side1.6fd99c0f.jpg",
+      "side2": "/_next/static/media/cactus-1-side2.ae0c751e.jpg",
+      "side3": "/_next/static/media/cactus-1-side3.83b2e9aa.jpg"
+    },
+    "isSold": false,
+    "createdAt": "2026-03-19T00:00:00.000Z"
+  },
+  {
+    "id": "3",
+    "name": "Lophophora williamsii",
+    "family": "Lophophora",
+    "sizeCm": 6,
+    "price": 3500,
+    "growType": "seed",
+    "description": "Spineless, slow-growing, and highly prized by collectors.",
+    "images": {
+      "top": "/_next/static/media/cactus-1-side3.83b2e9aa.jpg",
+      "side1": "/_next/static/media/cactus-1-top.0e0b0a0b.jpg",
+      "side2": "/_next/static/media/cactus-2-top.69b06200.jpg",
+      "side3": "/_next/static/media/cactus-1-side1.97e9e24c.jpg"
+    },
+    "isSold": false,
+    "createdAt": "2026-03-19T00:00:00.000Z"
+  },
+  {
+    "id": "4",
+    "name": "Ariocarpus retusus",
+    "family": "Ariocarpus",
+    "sizeCm": 8,
+    "price": 5200,
+    "growType": "seed",
+    "description": "Distinct triangular tubercles with exceptionally slow growth.",
+    "images": {
+      "top": "/_next/static/media/cactus-1-side2.ae0c751e.jpg",
+      "side1": "/_next/static/media/cactus-1-side3.83b2e9aa.jpg",
+      "side2": "/_next/static/media/cactus-2-side1.6fd99c0f.jpg",
+      "side3": "/_next/static/media/cactus-1-top.0e0b0a0b.jpg"
+    },
+    "isSold": false,
+    "createdAt": "2026-03-19T00:00:00.000Z"
+  }
+]

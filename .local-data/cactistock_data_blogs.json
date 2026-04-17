@@ -1,0 +1,26 @@
+[
+  {
+    "id": "1",
+    "title": "Beginner cactus care guide",
+    "excerpt": "The essentials of watering, light, and substrate selection.",
+    "content": "Cacti prefer bright light and dry cycles. Water only when the mix is fully dry.",
+    "coverImage": "/_next/static/media/cactus-1-top.0e0b0a0b.jpg",
+    "gallery": [
+      "/_next/static/media/cactus-1-top.0e0b0a0b.jpg",
+      "/_next/static/media/cactus-1-side1.97e9e24c.jpg"
+    ],
+    "createdAt": "2026-03-19T00:00:00.000Z"
+  },
+  {
+    "id": "2",
+    "title": "Complete grafting workflow",
+    "excerpt": "How to graft cactus safely and improve survival rates.",
+    "content": "Grafting works best with clean cuts and proper alignment of vascular rings.",
+    "coverImage": "/_next/static/media/cactus-2-top.69b06200.jpg",
+    "gallery": [
+      "/_next/static/media/cactus-2-top.69b06200.jpg",
+      "/_next/static/media/cactus-2-side1.6fd99c0f.jpg"
+    ],
+    "createdAt": "2026-03-19T00:00:00.000Z"
+  }
+]

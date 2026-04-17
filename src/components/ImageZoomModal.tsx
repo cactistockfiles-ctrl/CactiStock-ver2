@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, MouseEvent, WheelEvent } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { X } from "lucide-react";
 
@@ -9,7 +9,12 @@ interface ImageZoomModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const ImageZoomModal = ({ src, alt, open, onOpenChange }: ImageZoomModalProps) => {
+const ImageZoomModal = ({
+  src,
+  alt,
+  open,
+  onOpenChange,
+}: ImageZoomModalProps) => {
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -24,25 +29,34 @@ const ImageZoomModal = ({ src, alt, open, onOpenChange }: ImageZoomModalProps) =
     }
   }, [scale]);
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    const newScale = Math.min(Math.max(0.5, scale - e.deltaY * 0.001), 3);
-    setScale(newScale);
-    if (newScale <= 1) setPosition({ x: 0, y: 0 });
-  }, [scale]);
+  const handleWheel = useCallback(
+    (e: WheelEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      const newScale = Math.min(Math.max(0.5, scale - e.deltaY * 0.001), 3);
+      setScale(newScale);
+      if (newScale <= 1) setPosition({ x: 0, y: 0 });
+    },
+    [scale],
+  );
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (scale > 1) {
-      setIsDragging(true);
-      setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
-    }
-  }, [scale, position]);
+  const handleMouseDown = useCallback(
+    (e: MouseEvent<HTMLDivElement>) => {
+      if (scale > 1) {
+        setIsDragging(true);
+        setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+      }
+    },
+    [scale, position],
+  );
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (isDragging) {
-      setPosition({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
-    }
-  }, [isDragging, dragStart]);
+  const handleMouseMove = useCallback(
+    (e: MouseEvent<HTMLDivElement>) => {
+      if (isDragging) {
+        setPosition({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
+      }
+    },
+    [isDragging, dragStart],
+  );
 
   const handleMouseUp = useCallback(() => setIsDragging(false), []);
 

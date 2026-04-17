@@ -1,0 +1,30 @@
+[
+  {
+    "id": "hero-1",
+    "title": "Rare Cactus Collection",
+    "subtitle": "Premium plants selected one by one for serious collectors.",
+    "buttonLabel": "Browse Catalogue",
+    "buttonHref": "/catalogue",
+    "imageUrl": "/_next/static/media/hero-cactus.20c3ed1c.jpg",
+    "order": 1,
+    "active": true,
+    "showPrimaryButton": true,
+    "secondaryButtonLabel": "",
+    "secondaryButtonHref": "/about",
+    "showSecondaryButton": false
+  },
+  {
+    "id": "hero-1774035949191",
+    "title": "test",
+    "subtitle": "test",
+    "buttonLabel": "test",
+    "buttonHref": "/catalogue",
+    "imageUrl": "https://res.cloudinary.com/dqdhcqdoz/image/upload/v1774035943/cactistock/heroes/1774035941453-LINE_ALBUM_1032026_260321_5.jpg",
+    "order": 2,
+    "active": true,
+    "showPrimaryButton": true,
+    "secondaryButtonLabel": "button",
+    "secondaryButtonHref": "/about",
+    "showSecondaryButton": true
+  }
+]
