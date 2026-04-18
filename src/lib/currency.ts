@@ -1,4 +1,4 @@
-const FRANKFURTER_API_URL = "https://api.frankfurter.app";
+const CURRENCY_API_URL = "/api/currency";
 
 interface ExchangeRateResponse {
   amount: number;
@@ -30,7 +30,7 @@ export async function getExchangeRates(baseCurrency: string = "THB"): Promise<Re
 
   try {
     const response = await fetch(
-      `${FRANKFURTER_API_URL}/latest?from=${baseCurrency}`,
+      `${CURRENCY_API_URL}?from=${baseCurrency}`,
     );
 
     if (!response.ok) {

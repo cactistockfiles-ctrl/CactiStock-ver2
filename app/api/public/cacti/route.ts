@@ -16,5 +16,11 @@ export async function GET() {
     return soldDate > twentyFourHoursAgo;
   });
 
-  return NextResponse.json(filteredItems);
+  return NextResponse.json(filteredItems, {
+    headers: {
+      "Cache-Control": "no-store, no-cache, must-revalidate",
+      "Pragma": "no-cache",
+      "Expires": "0",
+    },
+  });
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useLocale } from "@/context/LocaleContext";
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 interface AboutData {
   whoWeAre: string;
@@ -43,27 +43,17 @@ function toAssetUrl(value: string | { src: string }) {
   return typeof value === "string" ? value : value.src;
 }
 
+const fetcher = async (url: string) => {
+  const res = await fetch(url, { cache: "no-store" });
+  return res.json();
+};
+
 export default function AboutPage() {
   const { t, locale } = useLocale();
-  const [aboutData, setAboutData] = useState<AboutData | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function loadAboutData() {
-      try {
-        const res = await fetch("/api/about");
-        if (res.ok) {
-          const data = await res.json();
-          setAboutData(data);
-        }
-      } catch (error) {
-        console.error("Error loading about data:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadAboutData();
-  }, []);
+  const { data: aboutData, isLoading: loading } = useQuery<AboutData>({
+    queryKey: ["about"],
+    queryFn: () => fetcher("/api/about"),
+  });
 
   if (loading) {
     return (

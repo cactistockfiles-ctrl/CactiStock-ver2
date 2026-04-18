@@ -12,7 +12,19 @@ export default function AppProviders({
 }: {
   children: React.ReactNode;
 }) {
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 0, // Data is stale immediately
+            gcTime: 0, // Garbage collect cache immediately
+            refetchOnWindowFocus: true, // Refetch when window regains focus
+            refetchOnMount: true, // Refetch when component mounts
+          },
+        },
+      }),
+  );
 
   return (
     <QueryClientProvider client={queryClient}>

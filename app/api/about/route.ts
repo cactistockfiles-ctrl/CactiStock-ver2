@@ -84,13 +84,32 @@ export async function GET() {
         youtube: "",
         showYoutube: false,
       };
-      return NextResponse.json(defaultContent);
+      return NextResponse.json(defaultContent, {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+          "Pragma": "no-cache",
+          "Expires": "0",
+        },
+      });
     }
 
     const content = await readFile(DATA_FILE, "utf-8");
-    return NextResponse.json(JSON.parse(content));
+    return NextResponse.json(JSON.parse(content), {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0",
+      },
+    });
   } catch (error) {
     console.error("Error reading about data:", error);
-    return NextResponse.json({ error: "Failed to read about data" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to read about data" }, {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0",
+      },
+      status: 500
+    });
   }
 }

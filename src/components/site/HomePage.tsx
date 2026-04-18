@@ -36,7 +36,7 @@ function toLocaleHref(href: unknown, locale: string, fallback: string) {
 }
 
 const fetcher = async (url: string) => {
-  const res = await fetch(url);
+  const res = await fetch(url, { cache: "no-store" });
   return res.json();
 };
 
