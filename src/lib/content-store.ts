@@ -1,6 +1,5 @@
 import "server-only";
 
-import { cache } from "react";
 import { seedBlogs, seedCacti, seedHeroes, seedNews } from "@/data/seed";
 import { BlogPost, CactusItem, HeroItem, NewsItem } from "@/types/content";
 import { getDb } from "@/lib/firebase-server";
@@ -68,10 +67,10 @@ async function writeCollection<T extends { id: string }>(
 
 /* ---------- cacti ---------- */
 
-export const getCacti = cache(async function getCacti(): Promise<CactusItem[]> {
+export async function getCacti(): Promise<CactusItem[]> {
   const rows = await readCollection<CactusItem>(COLLECTIONS.cacti, seedCacti);
   return rows.toSorted((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
-});
+}
 
 export async function saveCacti(rows: CactusItem[]) {
   await writeCollection(COLLECTIONS.cacti, rows);
@@ -79,10 +78,10 @@ export async function saveCacti(rows: CactusItem[]) {
 
 /* ---------- blogs ---------- */
 
-export const getBlogs = cache(async function getBlogs(): Promise<BlogPost[]> {
+export async function getBlogs(): Promise<BlogPost[]> {
   const rows = await readCollection<BlogPost>(COLLECTIONS.blogs, seedBlogs);
   return rows.toSorted((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
-});
+}
 
 export async function saveBlogs(rows: BlogPost[]) {
   await writeCollection(COLLECTIONS.blogs, rows);
@@ -90,7 +89,7 @@ export async function saveBlogs(rows: BlogPost[]) {
 
 /* ---------- heroes ---------- */
 
-export const getHeroes = cache(async function getHeroes(): Promise<HeroItem[]> {
+export async function getHeroes(): Promise<HeroItem[]> {
   const rows = await readCollection<HeroItem>(COLLECTIONS.heroes, seedHeroes);
   return rows
     .map((row, index) => ({
@@ -108,7 +107,7 @@ export const getHeroes = cache(async function getHeroes(): Promise<HeroItem[]> {
         Boolean(row.secondaryButtonLabel || row.secondaryButtonHref),
     }))
     .toSorted((a, b) => a.order - b.order);
-});
+}
 
 export async function saveHeroes(rows: HeroItem[]) {
   await writeCollection(COLLECTIONS.heroes, rows);
@@ -116,10 +115,10 @@ export async function saveHeroes(rows: HeroItem[]) {
 
 /* ---------- news ---------- */
 
-export const getNews = cache(async function getNews(): Promise<NewsItem[]> {
+export async function getNews(): Promise<NewsItem[]> {
   const rows = await readCollection<NewsItem>(COLLECTIONS.news, seedNews);
   return rows.toSorted((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
-});
+}
 
 export async function saveNews(rows: NewsItem[]) {
   await writeCollection(COLLECTIONS.news, rows);
