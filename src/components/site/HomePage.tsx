@@ -139,13 +139,13 @@ export default function HomePage() {
         </div>
         <div className="container absolute top-[40%] left-0 right-0 mx-auto flex items-start px-4 md:items-start">
           <div
-            className="w-full max-w-xl space-y-6 text-center md:text-left transition-opacity duration-500"
+            className="w-full max-w-2xl space-y-4 text-center md:space-y-6 md:text-left transition-opacity duration-500"
             style={{ opacity: textOpacity }}
           >
-            <h1 className="font-display whitespace-pre text-4xl font-bold leading-tight text-cactus-50 md:text-8xl drop-shadow-lg">
+            <h1 className="font-display text-3xl font-bold leading-tight text-cactus-50 sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl drop-shadow-lg break-words hyphens-auto">
               {titleText}
             </h1>
-            <p className="text-xl text-cactus-100 drop-shadow-md whitespace-pre">
+            <p className="text-base text-cactus-100 drop-shadow-md sm:text-lg md:text-xl break-words hyphens-auto">
               {subtitleText}
             </p>
             {(showPrimaryButton || showSecondaryButton) && (
