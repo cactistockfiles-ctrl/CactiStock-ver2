@@ -1,67 +1,106 @@
 "use client";
 
 import Link from "next/link";
+import { Instagram, Facebook, Twitter } from "lucide-react";
 import { useLocale } from "@/context/LocaleContext";
 
 const Footer = () => {
   const { locale, t } = useLocale();
 
   return (
-    <footer className="border-t bg-cactus-900 text-cactus-100">
+    <footer className="bg-cactus-900 text-cactus-50">
       <div className="container mx-auto px-4 py-12">
-        <div className="grid gap-8 md:grid-cols-3">
-          <div>
-            <h3 className="font-display text-xl font-bold text-cactus-50">
-              Cacti Stock
-            </h3>
+        <div className="grid gap-8 md:grid-cols-4">
+          <div className="space-y-4">
+            <h3 className="font-display text-2xl font-bold">Cacti Stock</h3>
             <p className="mt-2 text-sm text-cactus-200">
-              แหล่งรวมกระบองเพชรหายากคุณภาพสูง สำหรับนักสะสมตัวจริง
+              {t("footer.description")}
             </p>
           </div>
-          <div>
-            <h4 className="font-semibold text-cactus-50">
+
+          <div className="space-y-4">
+            <h4 className="font-display text-lg font-semibold">
               {t("footer.quickLinks")}
             </h4>
-            <div className="mt-2 flex flex-col gap-1">
-              <Link
-                href={`/${locale}/catalogue`}
-                className="text-sm text-cactus-200 hover:text-cactus-50 transition-colors"
-              >
-                {t("nav.catalogue")}
-              </Link>
-              <Link
-                href={`/${locale}/about`}
-                className="text-sm text-cactus-200 hover:text-cactus-50 transition-colors"
-              >
-                {t("nav.about")}
-              </Link>
-              <Link
-                href={`/${locale}/blog`}
-                className="text-sm text-cactus-200 hover:text-cactus-50 transition-colors"
-              >
-                {t("nav.blog")}
-              </Link>
-            </div>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <Link
+                  href={`/${locale}/catalogue`}
+                  className="text-cactus-200 hover:text-cactus-50 transition-colors"
+                >
+                  {t("nav.catalogue")}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href={`/${locale}/about`}
+                  className="text-cactus-200 hover:text-cactus-50 transition-colors"
+                >
+                  {t("nav.about")}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href={`/${locale}/blog`}
+                  className="text-cactus-200 hover:text-cactus-50 transition-colors"
+                >
+                  {t("nav.blog")}
+                </Link>
+              </li>
+            </ul>
           </div>
-          <div>
-            <h4 className="font-semibold text-cactus-50">
+
+          <div className="space-y-4">
+            <h4 className="font-display text-lg font-semibold">
               {t("footer.contact")}
             </h4>
-            <p className="mt-2 text-sm text-cactus-200">
-              cactistockfiles@gmail.com
-            </p>
+            <ul className="space-y-2 text-sm text-cactus-200">
+              <li>Email: cactistockfiles@gmail.com</li>
+              <li>LINE: cactistockfiles</li>
+            </ul>
+          </div>
+
+          <div className="space-y-4">
+            <h4 className="font-display text-lg font-semibold">Follow Us</h4>
+            <div className="flex gap-4">
+              <a
+                href="https://instagram.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-cactus-200 hover:text-cactus-50 transition-colors"
+              >
+                <Instagram className="h-5 w-5" />
+              </a>
+              <a
+                href="https://facebook.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-cactus-200 hover:text-cactus-50 transition-colors"
+              >
+                <Facebook className="h-5 w-5" />
+              </a>
+              <a
+                href="https://twitter.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-cactus-200 hover:text-cactus-50 transition-colors"
+              >
+                <Twitter className="h-5 w-5" />
+              </a>
+            </div>
           </div>
         </div>
-        <div className="mt-8 border-t border-cactus-700 pt-4 text-center text-xs text-cactus-200">
-          {t("footer.copyright")}
-          <div className="mt-2">
+
+        <div className="mt-12 border-t border-cactus-800 pt-8 text-center text-sm text-cactus-300">
+          <p>{t("footer.copyright")}</p>
+          <p className="mt-2">
             <Link
               href="/admin/login"
-              className="text-[11px] text-cactus-300 hover:text-cactus-100 transition-colors"
+              className="text-cactus-400 hover:text-cactus-50 transition-colors"
             >
               {t("footer.adminLogin")}
             </Link>
-          </div>
+          </p>
         </div>
       </div>
     </footer>

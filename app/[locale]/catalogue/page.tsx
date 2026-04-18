@@ -1,15 +1,8 @@
 import CataloguePage from "@/components/site/CataloguePage";
 import type { Metadata } from "next";
-import { isLocale } from "@/lib/i18n";
+import { isLocale, t } from "@/lib/i18n";
 import { buildLocaleAlternates, canonicalFor } from "@/lib/seo";
 import { Locale } from "@/types/content";
-
-const localeTitle: Record<Locale, string> = {
-  th: "แคตตาล็อก",
-  en: "Catalogue",
-  zh: "目录",
-  id: "Katalog",
-};
 
 export async function generateMetadata({
   params,
@@ -24,8 +17,8 @@ export async function generateMetadata({
   const pathAfterLocale = "/catalogue";
 
   return {
-    title: localeTitle[locale],
-    description: "Rare cactus listing sorted by newest/oldest and family.",
+    title: t(locale, "catalogue.title"),
+    description: t(locale, "catalogue.subtitle"),
     alternates: {
       canonical: canonicalFor(locale, pathAfterLocale),
       languages: buildLocaleAlternates(pathAfterLocale),

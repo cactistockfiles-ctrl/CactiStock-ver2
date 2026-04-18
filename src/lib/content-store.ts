@@ -27,7 +27,14 @@ async function readCollection<T extends { id: string }>(
     const db = getDb();
     const snapshot = await db.collection(collection).get();
     if (snapshot.empty) {
-      // Seed Firestore with default data on first access
+      // Check if collection has been initialized before
+      const initDoc = await db.collection("_init").doc(collection).get();
+      if (initDoc.exists) {
+        // Collection was initialized but is now empty (all items deleted)
+        return [];
+      }
+      // First-time initialization - seed with default data
+      await db.collection("_init").doc(collection).set({ initialized: true });
       await writeCollection(collection, fallback);
       return fallback;
     }

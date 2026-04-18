@@ -13,6 +13,7 @@ import { ShoppingCart, ZoomIn } from "lucide-react";
 import { CactusItem } from "@/types/content";
 import { useCart } from "@/context/CartContext";
 import { useLocale } from "@/context/LocaleContext";
+import { useCurrency } from "@/hooks/useCurrency";
 import ImageZoomModal from "./ImageZoomModal";
 
 interface Props {
@@ -24,6 +25,7 @@ interface Props {
 const CactusDetailModal = ({ cactus, open, onOpenChange }: Props) => {
   const { addToCart } = useCart();
   const { t } = useLocale();
+  const { formatted: priceFormatted } = useCurrency(cactus?.price || 0);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string>("");
 
@@ -75,7 +77,7 @@ const CactusDetailModal = ({ cactus, open, onOpenChange }: Props) => {
                   >
                     <img
                       src={img}
-                      alt={`${cactus.name} มุม ${i + 1}`}
+                      alt={`${cactus.name} ${t("common.angle")} ${i + 1}`}
                       className="h-full w-full object-cover"
                     />
                   </button>
@@ -88,7 +90,9 @@ const CactusDetailModal = ({ cactus, open, onOpenChange }: Props) => {
                 <div className="flex gap-2">
                   <Badge variant="secondary">{cactus.family}</Badge>
                   <Badge variant="outline">
-                    {cactus.growType === "seed" ? "ไม้เมล็ด" : "ไม้กราฟ"}
+                    {cactus.growType === "seed"
+                      ? t("common.seed")
+                      : t("common.graft")}
                   </Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">
@@ -102,7 +106,7 @@ const CactusDetailModal = ({ cactus, open, onOpenChange }: Props) => {
 
               <div className="flex items-center justify-between pt-4 border-t">
                 <span className="font-display text-3xl font-bold text-primary">
-                  ฿{cactus.price.toLocaleString()}
+                  {priceFormatted}
                 </span>
                 <Button
                   disabled={cactus.isSold}

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { CactusItem } from "@/types/content";
 import { useCart } from "@/context/CartContext";
 import { useLocale } from "@/context/LocaleContext";
+import { useCurrency } from "@/hooks/useCurrency";
 import { useState } from "react";
 
 interface Props {
@@ -16,9 +17,11 @@ interface Props {
 const CactusCard = ({ cactus, onSelect }: Props) => {
   const { addToCart, items } = useCart();
   const { t } = useLocale();
+  const { formatted: priceFormatted } = useCurrency(cactus.price);
   const [addedToCart, setAddedToCart] = useState(false);
 
-  const growTypeLabel = cactus.growType === "seed" ? "ไม้เมล็ด" : "ไม้กราฟ";
+  const growTypeLabel =
+    cactus.growType === "seed" ? t("common.seed") : t("common.graft");
   const isInCart =
     items.some((item) => item.cactus.id === cactus.id) || addedToCart;
   const isReserved =
@@ -75,14 +78,14 @@ const CactusCard = ({ cactus, onSelect }: Props) => {
           </Badge>
           {isReserved && (
             <Badge variant="destructive" className="text-xs">
-              จองแล้ว
+              {t("common.reserved")}
             </Badge>
           )}
         </div>
         <div className="flex items-center justify-between pt-2">
           <div className="flex flex-col">
             <span className="font-display text-xl font-bold text-primary">
-              ฿{cactus.price.toLocaleString()}
+              {priceFormatted}
             </span>
             {cactus.isSold && (
               <span className="text-xs font-bold text-destructive">
@@ -91,7 +94,7 @@ const CactusCard = ({ cactus, onSelect }: Props) => {
             )}
             {isReserved && (
               <span className="text-xs font-medium text-orange-600">
-                จองแล้ว
+                {t("common.reserved")}
               </span>
             )}
           </div>

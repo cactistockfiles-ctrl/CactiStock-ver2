@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Leaf, Shield, Truck } from "lucide-react";
+import { ArrowRight, ChevronDown, Leaf, Shield, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CactusCard from "@/components/CactusCard";
 import CactusDetailModal from "@/components/CactusDetailModal";
+import Loading from "@/components/Loading";
 import { useLocale } from "@/context/LocaleContext";
-import { BlogPost, CactusItem, HeroItem } from "@/types/content";
-import heroFallback from "@/assets/hero-cactus.jpg";
+import { BlogPost, CactusItem, HeroItem, NewsItem } from "@/types/content";
 
 function toAssetUrl(value: string | { src: string }) {
   return typeof value === "string" ? value : value.src;
@@ -35,8 +35,6 @@ function toLocaleHref(href: unknown, locale: string, fallback: string) {
   return href;
 }
 
-const heroFallbackUrl = toAssetUrl(heroFallback as string | { src: string });
-
 const fetcher = async (url: string) => {
   const res = await fetch(url);
   return res.json();
@@ -60,29 +58,15 @@ export default function HomePage() {
     queryKey: ["heroes"],
     queryFn: () => fetcher("/api/public/heroes"),
   });
+  const { data: news = [] } = useQuery<NewsItem[]>({
+    queryKey: ["news"],
+    queryFn: () => fetcher("/api/public/news"),
+  });
 
   const activeHeroes = useMemo(() => {
     const rows = heroes.filter((h) => h.active !== false);
-    if (rows.length === 0) {
-      return [
-        {
-          id: "fallback-hero",
-          title: t("home.title").replace("\\n", " "),
-          subtitle: t("home.subtitle"),
-          buttonLabel: t("home.ctaCatalogue"),
-          buttonHref: `/${locale}/catalogue`,
-          showPrimaryButton: true,
-          secondaryButtonLabel: t("home.ctaAbout"),
-          secondaryButtonHref: `/${locale}/about`,
-          showSecondaryButton: false,
-          imageUrl: heroFallbackUrl,
-          order: 1,
-          active: true,
-        } as HeroItem,
-      ];
-    }
     return rows;
-  }, [heroes, locale, t]);
+  }, [heroes]);
 
   useEffect(() => {
     if (activeHeroes.length <= 1) {
@@ -105,15 +89,35 @@ export default function HomePage() {
   }, [activeHeroes.length]);
 
   const currentHero = activeHeroes[heroIndex] || activeHeroes[0];
-  const titleText = (currentHero?.title || t("home.title")).replace(
-    /\\n/g,
-    "\n",
-  );
+  const titleText = (
+    currentHero?.titleTranslations?.[locale] ||
+    currentHero?.title ||
+    t("home.title")
+  )
+    .replace(/\\n/g, "\n")
+    .replace(/\\ n/g, "\n");
+  const subtitleText = (
+    currentHero?.subtitleTranslations?.[locale] ||
+    currentHero?.subtitle ||
+    t("home.subtitle")
+  )
+    .replace(/\\n/g, "\n")
+    .replace(/\\ n/g, "\n");
+  const buttonLabelText =
+    currentHero?.buttonLabelTranslations?.[locale] || currentHero?.buttonLabel;
+  const secondaryButtonLabelText =
+    currentHero?.secondaryButtonLabelTranslations?.[locale] ||
+    currentHero?.secondaryButtonLabel;
   const showPrimaryButton =
     currentHero?.showPrimaryButton ??
     Boolean(currentHero?.buttonLabel || currentHero?.buttonHref);
   const showSecondaryButton = currentHero?.showSecondaryButton ?? false;
   const featured = cacti.slice(0, 3);
+
+  // If no heroes, show loading
+  if (activeHeroes.length === 0) {
+    return <Loading />;
+  }
 
   return (
     <div>
@@ -127,25 +131,27 @@ export default function HomePage() {
               className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 ${
                 idx === heroIndex ? "opacity-100" : "opacity-0"
               }`}
+              style={{ objectPosition: "60% center" }}
+              suppressHydrationWarning
             />
           ))}
           <div className="absolute inset-0 bg-gradient-to-r from-cactus-900/30 to-cactus-900/10" />
         </div>
-        <div className="container absolute top-[50%] left-0 right-0 mx-auto flex items-start px-4 ">
+        <div className="container absolute top-[40%] left-0 right-0 mx-auto flex items-start px-4 md:items-start">
           <div
-            className="max-w-xl space-y-6 transition-opacity duration-500"
+            className="w-full max-w-xl space-y-6 text-center md:text-left transition-opacity duration-500"
             style={{ opacity: textOpacity }}
           >
-            <h1 className="font-display whitespace-pre-wrap text-4xl font-bold leading-tight text-cactus-50 md:text-8xl">
+            <h1 className="font-display whitespace-pre text-4xl font-bold leading-tight text-cactus-50 md:text-8xl drop-shadow-lg">
               {titleText}
             </h1>
-            <p className="text-xl text-cactus-100">
-              {currentHero?.subtitle || t("home.subtitle")}
+            <p className="text-xl text-cactus-100 drop-shadow-md whitespace-pre">
+              {subtitleText}
             </p>
             {(showPrimaryButton || showSecondaryButton) && (
-              <div className="flex gap-3">
+              <div className="flex flex-col items-center gap-3 md:flex-row md:justify-start">
                 {showPrimaryButton && (
-                  <Button asChild size="lg" className="gap-2">
+                  <Button asChild size="lg" className="gap-2 shadow-lg">
                     <Link
                       href={toLocaleHref(
                         currentHero?.buttonHref || "/catalogue",
@@ -153,7 +159,7 @@ export default function HomePage() {
                         `/${locale}/catalogue`,
                       )}
                     >
-                      {currentHero?.buttonLabel || t("home.ctaCatalogue")}{" "}
+                      {buttonLabelText || t("home.ctaCatalogue")}{" "}
                       <ArrowRight className="h-4 w-4" />
                     </Link>
                   </Button>
@@ -163,7 +169,7 @@ export default function HomePage() {
                     asChild
                     variant="outline"
                     size="lg"
-                    className="border-cactus-200 hover:text-cactus-50 text-cactus-black hover:bg-cactus-50/10 "
+                    className="border-cactus-200 hover:text-cactus-50 text-cactus-black hover:bg-cactus-50/10 shadow-lg"
                   >
                     <Link
                       href={toLocaleHref(
@@ -172,7 +178,7 @@ export default function HomePage() {
                         `/${locale}/about`,
                       )}
                     >
-                      {currentHero?.secondaryButtonLabel || t("home.ctaAbout")}
+                      {secondaryButtonLabelText || t("home.ctaAbout")}
                     </Link>
                   </Button>
                 )}
@@ -180,15 +186,15 @@ export default function HomePage() {
             )}
           </div>
         </div>
-        <div className="pointer-events-none absolute inset-x-0 bottom-6 z-10 flex justify-center px-4">
-          <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-cactus-900/35 px-4 py-2 backdrop-blur-sm">
+        <div className="pointer-events-none absolute inset-x-0 top-24 z-10 flex justify-center px-4">
+          <div className="pointer-events-auto flex items-center gap-2 rounded-full  px-4 py-2 backdrop-blur-sm">
             {activeHeroes.map((hero, idx) => (
               <button
                 type="button"
                 aria-label={`hero-${idx + 1}`}
                 key={hero.id}
                 onClick={() => setHeroIndex(idx)}
-                className={`h-2.5 w-2.5 rounded-full transition-all ${
+                className={`h-2 w-2 md:h-2.5 md:w-2.5 rounded-full transition-all ${
                   idx === heroIndex
                     ? "scale-110 bg-cactus-50"
                     : "bg-cactus-200/50 hover:bg-cactus-100/80"
@@ -196,6 +202,18 @@ export default function HomePage() {
               />
             ))}
           </div>
+        </div>
+        <div className="pointer-events-none absolute inset-x-0 bottom-6 z-10 flex justify-center px-4">
+          <button
+            type="button"
+            onClick={() =>
+              window.scrollTo({ top: window.innerHeight, behavior: "smooth" })
+            }
+            className="pointer-events-auto flex animate-bounce items-center justify-center rounded-full bg-cactus-900/35 p-3 backdrop-blur-sm hover:bg-cactus-900/50 transition-colors"
+            aria-label="Scroll down"
+          >
+            <ChevronDown className="h-6 w-6 text-cactus-50" />
+          </button>
         </div>
       </section>
 
@@ -205,17 +223,17 @@ export default function HomePage() {
             {
               icon: Leaf,
               title: t("home.features.quality"),
-              desc: "คัดเลือกสายพันธุ์แท้จากแหล่งที่เชื่อถือได้",
+              desc: t("home.features.qualityDesc"),
             },
             {
               icon: Truck,
               title: t("home.features.shipping"),
-              desc: "บรรจุภัณฑ์พิเศษสำหรับการจัดส่งต้นไม้",
+              desc: t("home.features.shippingDesc"),
             },
             {
               icon: Shield,
               title: t("home.features.guarantee"),
-              desc: "รับประกันต้นไม้ถึงมือคุณในสภาพสมบูรณ์",
+              desc: t("home.features.guaranteeDesc"),
             },
           ].map((f, i) => (
             <div
@@ -236,9 +254,53 @@ export default function HomePage() {
         </div>
       </section>
 
+      <section className="bg-earth-50 py-16">
+        <div className="container mx-auto px-4">
+          <div className="mb-8 flex flex-col items-center text-center md:flex-row md:items-end md:justify-between md:text-left">
+            <div>
+              <h2 className="font-display text-3xl font-bold">
+                {t("news.title")}
+              </h2>
+              <p className="text-muted-foreground">{t("news.subtitle")}</p>
+            </div>
+          </div>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {news.slice(0, 3).map((item) => (
+              <Link
+                key={item.id}
+                href={`/${locale}/news/${item.id}`}
+                className="group cursor-pointer overflow-hidden rounded-lg border bg-card shadow-sm transition-all hover:shadow-md hover:-translate-y-1"
+              >
+                <div className="h-48 overflow-hidden">
+                  <img
+                    src={item.coverImage}
+                    alt={item.title}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                </div>
+                <div className="p-6">
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(item.createdAt).toLocaleDateString()}
+                  </p>
+                  <h3 className="mt-2 font-display text-lg font-semibold">
+                    {item.title}
+                  </h3>
+                  <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
+                    {item.content}
+                  </p>
+                  <span className="mt-3 inline-block text-sm font-medium text-primary">
+                    {t("common.readMore")} →
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="py-16">
         <div className="container mx-auto px-4">
-          <div className="mb-8 flex items-end justify-between">
+          <div className="mb-8 flex flex-col items-center text-center md:flex-row md:items-end md:justify-between md:text-left">
             <div>
               <h2 className="font-display text-3xl font-bold">
                 {t("home.featured")}
@@ -261,7 +323,7 @@ export default function HomePage() {
 
       <section className="bg-earth-50 py-16">
         <div className="container mx-auto px-4">
-          <div className="mb-8 flex items-end justify-between">
+          <div className="mb-8 flex flex-col items-center text-center md:flex-row md:items-end md:justify-between md:text-left">
             <div>
               <h2 className="font-display text-3xl font-bold">
                 {t("home.latestBlog")}
@@ -278,23 +340,32 @@ export default function HomePage() {
             {blogs.slice(0, 3).map((post) => (
               <div
                 key={post.id}
-                className="rounded-lg border bg-card p-6 shadow-sm transition-shadow hover:shadow-md"
+                className="group cursor-pointer overflow-hidden rounded-lg border bg-card shadow-sm transition-all hover:shadow-md hover:-translate-y-1"
               >
-                <p className="text-xs text-muted-foreground">
-                  {new Date(post.createdAt).toLocaleDateString()}
-                </p>
-                <h3 className="mt-2 font-display text-lg font-semibold">
-                  {post.title}
-                </h3>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {post.excerpt}
-                </p>
-                <Link
-                  href={`/${locale}/blog/${post.id}`}
-                  className="mt-3 inline-block text-sm font-medium text-primary hover:underline"
-                >
-                  {t("common.readMore")} -&gt;
-                </Link>
+                <div className="h-48 overflow-hidden">
+                  <img
+                    src={post.coverImage}
+                    alt={post.title}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                </div>
+                <div className="p-6">
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(post.createdAt).toLocaleDateString()}
+                  </p>
+                  <h3 className="mt-2 font-display text-lg font-semibold">
+                    {post.title}
+                  </h3>
+                  <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
+                    {post.excerpt}
+                  </p>
+                  <Link
+                    href={`/${locale}/blog/${post.id}`}
+                    className="mt-3 inline-block text-sm font-medium text-primary hover:underline"
+                  >
+                    {t("common.readMore")} -&gt;
+                  </Link>
+                </div>
               </div>
             ))}
           </div>

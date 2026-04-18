@@ -19,12 +19,10 @@ export default function BlogPage() {
   });
 
   return (
-    <div className="container mx-auto px-4 py-12">
+    <div className="container mx-auto px-4 py-12 pt-20 text-center md:text-left">
       <div className="mb-8">
         <h1 className="font-display text-4xl font-bold">{t("nav.blog")}</h1>
-        <p className="text-muted-foreground">
-          ความรู้และเคล็ดลับเกี่ยวกับกระบองเพชร
-        </p>
+        <p className="text-muted-foreground">{t("blog.subtitle")}</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -32,20 +30,29 @@ export default function BlogPage() {
           <Link
             key={post.id}
             href={`/${locale}/blog/${post.id}`}
-            className="cursor-pointer rounded-lg border bg-card p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1"
+            className="group cursor-pointer overflow-hidden rounded-lg border bg-card shadow-sm transition-all hover:shadow-md hover:-translate-y-1"
           >
-            <p className="text-xs text-muted-foreground">
-              {new Date(post.createdAt).toLocaleDateString()}
-            </p>
-            <h2 className="mt-2 font-display text-xl font-semibold">
-              {post.title}
-            </h2>
-            <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
-              {post.excerpt}
-            </p>
-            <span className="mt-4 inline-block text-sm font-medium text-primary">
-              {t("common.readMore")} →
-            </span>
+            <div className="h-48 overflow-hidden">
+              <img
+                src={post.coverImage}
+                alt={post.title}
+                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              />
+            </div>
+            <div className="p-6">
+              <p className="text-xs text-muted-foreground">
+                {new Date(post.createdAt).toLocaleDateString()}
+              </p>
+              <h2 className="mt-2 font-display text-xl font-semibold">
+                {post.title}
+              </h2>
+              <p className="mt-3 text-sm text-muted-foreground leading-relaxed line-clamp-2">
+                {post.excerpt}
+              </p>
+              <span className="mt-4 inline-block text-sm font-medium text-primary">
+                {t("common.readMore")} →
+              </span>
+            </div>
           </Link>
         ))}
       </div>

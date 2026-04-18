@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getBlogs } from "@/lib/content-store";
-import { LOCALES, isLocale } from "@/lib/i18n";
+import { LOCALES, isLocale, t } from "@/lib/i18n";
 import {
   buildLocaleAlternates,
   canonicalFor,
@@ -14,13 +14,6 @@ interface Params {
   locale: string;
   id: string;
 }
-
-const localeDescription: Record<Locale, string> = {
-  th: "บทความเกี่ยวกับการเลี้ยงและสะสมแคคตัส",
-  en: "Cactus care and collecting insights.",
-  zh: "关于仙人掌养护与收藏的文章。",
-  id: "Artikel tentang perawatan dan koleksi kaktus.",
-};
 
 export async function generateStaticParams() {
   const blogs = await getBlogs();
@@ -51,7 +44,7 @@ export async function generateMetadata({
 
   const pathAfterLocale = `/blog/${post.id}`;
   const title = post.title;
-  const description = `${localeDescription[locale]} ${post.excerpt}`;
+  const description = `${t(locale, "blog.subtitle")} ${post.excerpt}`;
 
   return {
     title,

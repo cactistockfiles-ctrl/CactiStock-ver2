@@ -1,15 +1,8 @@
 import BlogPage from "@/components/site/BlogPage";
 import type { Metadata } from "next";
-import { isLocale } from "@/lib/i18n";
+import { isLocale, t } from "@/lib/i18n";
 import { buildLocaleAlternates, canonicalFor } from "@/lib/seo";
 import { Locale } from "@/types/content";
-
-const localeTitle: Record<Locale, string> = {
-  th: "บล็อก",
-  en: "Blog",
-  zh: "博客",
-  id: "Blog",
-};
 
 export async function generateMetadata({
   params,
@@ -24,8 +17,8 @@ export async function generateMetadata({
   const pathAfterLocale = "/blog";
 
   return {
-    title: localeTitle[locale],
-    description: "Cactus guides, propagation notes, and collector stories.",
+    title: t(locale, "nav.blog"),
+    description: t(locale, "blog.subtitle"),
     alternates: {
       canonical: canonicalFor(locale, pathAfterLocale),
       languages: buildLocaleAlternates(pathAfterLocale),

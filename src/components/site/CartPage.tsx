@@ -9,11 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useCart } from "@/context/CartContext";
 import { useLocale } from "@/context/LocaleContext";
+import { useCurrency } from "@/hooks/useCurrency";
 
 export default function CartPage() {
-  const { locale } = useLocale();
+  const { locale, t } = useLocale();
   const { items, removeFromCart, updateQuantity, clearCart, totalPrice } =
     useCart();
+  const { formatted: totalPriceFormatted } = useCurrency(totalPrice);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -23,7 +25,7 @@ export default function CartPage() {
 
   const handleSubmitOrder = async () => {
     if (!email.trim()) {
-      toast.error("กรุณากรอกอีเมลสำหรับติดต่อกลับ");
+      toast.error(t("cart.emailRequired"));
       return;
     }
 
@@ -53,14 +55,15 @@ export default function CartPage() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        toast.error(data.error || "ส่งข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+        toast.error(data.error || t("cart.submitError"));
         return;
       }
 
-      toast.success(
-        `ผู้ขาย จะติดต่อกลับไปที่ Email: ${email.trim()} เพื่อทำการคอรเฟิร์มว่าต้นไม้ทุกต้นที่คุณเลือก อยู่ในสภาพสมบูรณ์ พร้อมส่งอย่างเร็วที่สุด`,
-        { duration: 8000 },
+      const successMsg = t("cart.submitSuccess").replace(
+        "{email}",
+        email.trim(),
       );
+      toast.success(successMsg, { duration: 8000 });
       clearCart();
       setName("");
       setEmail("");
@@ -74,112 +77,124 @@ export default function CartPage() {
 
   if (items.length === 0) {
     return (
-      <div className="container mx-auto flex min-h-[60vh] flex-col items-center justify-center px-4 py-12 text-center">
+      <div className="container mx-auto flex min-h-[60vh] flex-col items-center justify-center px-4 py-12 pt-20 text-center">
         <ShoppingCart className="mb-4 h-16 w-16 text-muted-foreground/40" />
-        <h1 className="font-display text-2xl font-bold">ตะกร้าว่างเปล่า</h1>
-        <p className="mt-2 text-muted-foreground">
-          ยังไม่มีสินค้าในตะกร้า เริ่มเลือกกระบองเพชรกันเลย!
-        </p>
+        <h1 className="font-display text-2xl font-bold">{t("cart.empty")}</h1>
+        <p className="mt-2 text-muted-foreground">{t("cart.emptyDesc")}</p>
         <Button asChild className="mt-6">
-          <Link href={`/${locale}/catalogue`}>ไปที่แคตตาล็อก</Link>
+          <Link href={`/${locale}/catalogue`}>{t("cart.goToCatalogue")}</Link>
         </Button>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-12">
-      <h1 className="mb-8 font-display text-4xl font-bold">ตะกร้าสินค้า</h1>
+    <div className="container mx-auto px-4 py-12 pt-20 text-center md:text-left">
+      <h1 className="mb-8 font-display text-4xl font-bold">
+        {t("cart.title")}
+      </h1>
 
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-4">
-          {items.map((item) => (
-            <div
-              key={item.cactus.id}
-              className="flex gap-4 rounded-lg border bg-card p-4"
-            >
-              <img
-                src={item.cactus.images.top}
-                alt={item.cactus.name}
-                className="h-24 w-24 rounded-md object-cover"
-              />
-              <div className="flex flex-1 flex-col justify-between">
-                <div>
-                  <h3 className="font-display font-semibold">
-                    {item.cactus.name}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {item.cactus.growType === "seed" ? "ไม้เมล็ด" : "ไม้กราฟ"} ·{" "}
-                    {item.cactus.sizeCm} cm
-                  </p>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+          {items.map((item) => {
+            const CartItemPrice = () => {
+              const { formatted } = useCurrency(item.cactus.price);
+              return (
+                <span className="font-display font-bold text-primary">
+                  {formatted}
+                </span>
+              );
+            };
+            return (
+              <div
+                key={item.cactus.id}
+                className="flex gap-4 rounded-lg border bg-card p-4"
+              >
+                <img
+                  src={item.cactus.images.top}
+                  alt={item.cactus.name}
+                  className="h-24 w-24 rounded-md object-cover"
+                />
+                <div className="flex flex-1 flex-col justify-between">
+                  <div>
+                    <h3 className="font-display font-semibold">
+                      {item.cactus.name}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {item.cactus.growType === "seed"
+                        ? t("common.seed")
+                        : t("common.graft")}{" "}
+                      · {item.cactus.sizeCm} cm
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() =>
+                          updateQuantity(item.cactus.id, item.quantity - 1)
+                        }
+                        className="rounded-md border p-1 hover:bg-muted"
+                      >
+                        <Minus className="h-3 w-3" />
+                      </button>
+                      <span className="w-8 text-center text-sm font-medium">
+                        {item.quantity}
+                      </span>
+                      <button
+                        onClick={() =>
+                          updateQuantity(item.cactus.id, item.quantity + 1)
+                        }
+                        className="rounded-md border p-1 hover:bg-muted"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </button>
+                    </div>
+                    <CartItemPrice />
                     <button
-                      onClick={() =>
-                        updateQuantity(item.cactus.id, item.quantity - 1)
-                      }
-                      className="rounded-md border p-1 hover:bg-muted"
+                      onClick={() => removeFromCart(item.cactus.id)}
+                      className="text-destructive hover:text-destructive/80"
                     >
-                      <Minus className="h-3 w-3" />
-                    </button>
-                    <span className="w-8 text-center text-sm font-medium">
-                      {item.quantity}
-                    </span>
-                    <button
-                      onClick={() =>
-                        updateQuantity(item.cactus.id, item.quantity + 1)
-                      }
-                      className="rounded-md border p-1 hover:bg-muted"
-                    >
-                      <Plus className="h-3 w-3" />
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
-                  <span className="font-display font-bold text-primary">
-                    ฿{item.cactus.price.toLocaleString()}
-                  </span>
-                  <button
-                    onClick={() => removeFromCart(item.cactus.id)}
-                    className="text-destructive hover:text-destructive/80"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="rounded-lg border bg-card p-6 space-y-4 h-fit lg:sticky lg:top-24">
-          <h2 className="font-display text-xl font-bold">ข้อมูลการสั่งซื้อ</h2>
+          <h2 className="font-display text-xl font-bold">
+            {t("cart.orderInfo")}
+          </h2>
           <p className="text-sm text-muted-foreground">
-            กรอกช่องทางติดต่อของคุณก่อนส่งรายการให้ผู้ขายตรวจสอบ
+            {t("cart.orderInfoDesc")}
           </p>
 
           <div className="space-y-3">
             <Input
-              placeholder="ชื่อ-นามสกุล"
+              placeholder={t("cart.namePlaceholder")}
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
             <Input
-              placeholder="อีเมล *"
+              placeholder={t("cart.emailPlaceholder")}
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
             <Input
-              placeholder="เบอร์โทรศัพท์"
+              placeholder={t("cart.phonePlaceholder")}
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
             />
             <Input
-              placeholder="LINE ID (ถ้ามี)"
+              placeholder={t("cart.linePlaceholder")}
               value={line}
               onChange={(e) => setLine(e.target.value)}
             />
             <Textarea
-              placeholder="หมายเหตุเพิ่มเติม"
+              placeholder={t("cart.notePlaceholder")}
               value={note}
               onChange={(e) => setNote(e.target.value)}
             />
@@ -187,9 +202,9 @@ export default function CartPage() {
 
           <div className="border-t pt-4">
             <div className="flex justify-between text-lg font-bold">
-              <span>รวมทั้งสิ้น</span>
+              <span>{t("cart.total")}</span>
               <span className="text-primary font-display">
-                ฿{totalPrice.toLocaleString()}
+                {totalPriceFormatted}
               </span>
             </div>
           </div>
@@ -201,15 +216,13 @@ export default function CartPage() {
             disabled={isSubmitting}
           >
             <Send className="h-4 w-4" />
-            {isSubmitting
-              ? "กำลังส่งข้อมูล..."
-              : "ส่งสินทั้งหมดเพื่อตรวจสอบกับผู้ขาย"}
+            {isSubmitting ? t("cart.submitting") : t("cart.submit")}
           </Button>
 
           <p className="text-xs text-center text-muted-foreground">
-            ข้อมูลรายการจะถูกส่งไปยัง cactistockfiles@gmail.com
+            {t("cart.submitDesc")}
             <br />
-            ผู้ขายจะติดต่อกลับที่อีเมลของคุณเพื่อยืนยันความสมบูรณ์ก่อนจัดส่ง
+            {t("cart.confirmDesc")}
           </p>
         </div>
       </div>

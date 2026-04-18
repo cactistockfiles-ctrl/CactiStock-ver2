@@ -42,7 +42,7 @@ export default function CataloguePage() {
   }, [rows, family, sort]);
 
   return (
-    <div className="container mx-auto px-4 py-12 pt-28">
+    <div className="container mx-auto px-4 py-12 pt-20 text-center md:text-left">
       <div className="mb-8">
         <h1 className="font-display text-4xl font-bold">
           {t("catalogue.title")}
@@ -50,7 +50,7 @@ export default function CataloguePage() {
         <p className="text-muted-foreground">{t("catalogue.subtitle")}</p>
       </div>
 
-      <div className="mb-6 flex flex-wrap items-center gap-2">
+      <div className="mb-6 flex flex-wrap items-center justify-center gap-2 md:justify-start">
         <button
           type="button"
           onClick={() => setSort("newest")}

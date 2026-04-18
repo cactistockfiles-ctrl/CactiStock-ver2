@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getCacti } from "@/lib/content-store";
-import { LOCALES, isLocale } from "@/lib/i18n";
+import { LOCALES, isLocale, t } from "@/lib/i18n";
 import {
   buildLocaleAlternates,
   canonicalFor,
@@ -16,13 +16,6 @@ interface Params {
   locale: string;
   id: string;
 }
-
-const localeDescription: Record<Locale, string> = {
-  th: "รายละเอียดต้นไม้หายาก ราคา ขนาด และภาพรอบต้น",
-  en: "Rare cactus details, size, price, and full image angles.",
-  zh: "稀有仙人掌详细资料、尺寸、价格与多角度图片。",
-  id: "Detail kaktus langka: ukuran, harga, dan foto semua sudut.",
-};
 
 export async function generateStaticParams() {
   const cacti = await getCacti();
@@ -53,7 +46,7 @@ export async function generateMetadata({
 
   const pathAfterLocale = `/catalogue/${cactus.id}`;
   const title = `${cactus.name} (${cactus.family})`;
-  const description = `${localeDescription[locale]} ${cactus.description}`;
+  const description = `${t(locale, "catalogue.subtitle")} ${cactus.description}`;
 
   return {
     title,
@@ -89,6 +82,7 @@ export default async function CactusDetailPage({ params }: { params: Params }) {
     notFound();
   }
 
+  const locale = params.locale as Locale;
   const cacti = await getCacti();
   const cactus = cacti.find((x) => x.id === params.id);
 
@@ -99,8 +93,9 @@ export default async function CactusDetailPage({ params }: { params: Params }) {
   const schema = {
     "@context": "https://schema.org",
     "@type": "Product",
-    name: cactus.name,
-    description: cactus.description,
+    name: cactus.nameTranslations?.[params.locale] || cactus.name,
+    description:
+      cactus.descriptionTranslations?.[params.locale] || cactus.description,
     image: [
       cactus.images.top,
       cactus.images.side1,
@@ -159,19 +154,22 @@ export default async function CactusDetailPage({ params }: { params: Params }) {
         <div className="space-y-5">
           <div className="space-y-2">
             <h1 className="font-display text-4xl font-bold leading-tight">
-              {cactus.name}
+              {cactus.nameTranslations?.[params.locale] || cactus.name}
             </h1>
             <div className="flex flex-wrap gap-2">
               <Badge variant="secondary">{cactus.family}</Badge>
               <Badge variant="outline">
-                {cactus.growType === "seed" ? "ไม้เมล็ด" : "ไม้กราฟ"}
+                {cactus.growType === "seed"
+                  ? t(locale, "common.seed")
+                  : t(locale, "common.graft")}
               </Badge>
               <Badge variant="outline">{cactus.sizeCm} cm</Badge>
             </div>
           </div>
 
           <p className="leading-relaxed text-foreground/80">
-            {cactus.description}
+            {cactus.descriptionTranslations?.[params.locale] ||
+              cactus.description}
           </p>
 
           <div className="flex items-center gap-4 border-t pt-5">
@@ -180,13 +178,15 @@ export default async function CactusDetailPage({ params }: { params: Params }) {
             </div>
             {cactus.isSold && (
               <span className="text-sm font-semibold text-destructive">
-                ขายแล้ว
+                {t(locale, "catalogue.sold")}
               </span>
             )}
           </div>
 
           <Button asChild className="mt-2">
-            <a href={`/${params.locale}/catalogue`}>กลับไปหน้าแคตตาล็อก</a>
+            <a href={`/${params.locale}/catalogue`}>
+              {t(locale, "nav.catalogue")}
+            </a>
           </Button>
         </div>
       </div>

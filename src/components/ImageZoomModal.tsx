@@ -1,6 +1,7 @@
 import { useState, useCallback, MouseEvent, WheelEvent } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { X } from "lucide-react";
+import { useLocale } from "@/context/LocaleContext";
 
 interface ImageZoomModalProps {
   src: string;
@@ -15,6 +16,7 @@ const ImageZoomModal = ({
   open,
   onOpenChange,
 }: ImageZoomModalProps) => {
+  const { t } = useLocale();
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -97,7 +99,7 @@ const ImageZoomModal = ({
           />
         </div>
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-background/80 px-4 py-1 text-xs text-foreground">
-          {Math.round(scale * 100)}% — Double click เพื่อซูม
+          {Math.round(scale * 100)}% — {t("zoom.doubleClick")}
         </div>
       </DialogContent>
     </Dialog>

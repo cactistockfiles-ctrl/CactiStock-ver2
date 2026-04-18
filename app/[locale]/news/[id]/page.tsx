@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getNews } from "@/lib/content-store";
-import { LOCALES, isLocale } from "@/lib/i18n";
+import { LOCALES, isLocale, t } from "@/lib/i18n";
 import {
   buildLocaleAlternates,
   canonicalFor,
@@ -14,13 +14,6 @@ interface Params {
   locale: string;
   id: string;
 }
-
-const localeDescription: Record<Locale, string> = {
-  th: "ข่าวสารล่าสุดจาก Cacti Stock",
-  en: "Latest updates from Cacti Stock.",
-  zh: "Cacti Stock 最新新闻。",
-  id: "Pembaruan terbaru dari Cacti Stock.",
-};
 
 export async function generateStaticParams() {
   const news = await getNews();
@@ -50,7 +43,7 @@ export async function generateMetadata({
   }
 
   const pathAfterLocale = `/news/${item.id}`;
-  const description = `${localeDescription[locale]} ${item.title}`;
+  const description = `${t(locale, "news.subtitle")} ${item.title}`;
 
   return {
     title: item.title,
@@ -80,6 +73,7 @@ export default async function NewsDetailPage({ params }: { params: Params }) {
     notFound();
   }
 
+  const locale = params.locale as Locale;
   const news = await getNews();
   const item = news.find((x) => x.id === params.id);
 
@@ -94,7 +88,7 @@ export default async function NewsDetailPage({ params }: { params: Params }) {
           href={`/${params.locale}`}
           className="inline-flex items-center text-sm font-medium text-primary hover:underline"
         >
-          Back to Home
+          {t(locale, "nav.home")}
         </Link>
       </div>
 

@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { MoreVertical } from "lucide-react";
+import { MoreVertical, Languages, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,15 +22,20 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { BlogPost, CactusItem, HeroItem, NewsItem } from "@/types/content";
 import { cn } from "@/lib/utils";
+import { translateText } from "@/lib/translation";
+import { t as tI18n, LOCALES } from "@/lib/i18n";
+import type { Locale } from "@/types/content";
 
 const emptyCactus: CactusItem = {
   id: "",
   name: "",
+  nameTranslations: {},
   family: "",
   sizeCm: 0,
   price: 0,
   growType: "seed",
   description: "",
+  descriptionTranslations: {},
   images: { top: "", side1: "", side2: "", side3: "" },
   isSold: false,
   createdAt: "",
@@ -39,8 +44,11 @@ const emptyCactus: CactusItem = {
 const emptyBlog: BlogPost = {
   id: "",
   title: "",
+  titleTranslations: {},
   excerpt: "",
+  excerptTranslations: {},
   content: "",
+  contentTranslations: {},
   coverImage: "",
   gallery: [],
   createdAt: "",
@@ -49,17 +57,30 @@ const emptyBlog: BlogPost = {
 const emptyHero: HeroItem = {
   id: "",
   title: "",
+  titleTranslations: {},
   subtitle: "",
+  subtitleTranslations: {},
   buttonLabel: "",
+  buttonLabelTranslations: {},
   buttonHref: "/catalogue",
   showPrimaryButton: true,
   secondaryButtonLabel: "",
+  secondaryButtonLabelTranslations: {},
   secondaryButtonHref: "/about",
   showSecondaryButton: false,
   imageUrl: "",
   order: 1,
   active: true,
 };
+
+const pageLinks = [
+  { label: "Home", value: "/" },
+  { label: "Catalogue", value: "/catalogue" },
+  { label: "About", value: "/about" },
+  { label: "Blog", value: "/blog" },
+  { label: "News", value: "/news" },
+  { label: "Custom Link", value: "custom" },
+];
 
 function normalizeHeroFormValue(row: HeroItem): HeroItem {
   return {
@@ -79,7 +100,9 @@ function normalizeHeroFormValue(row: HeroItem): HeroItem {
 const emptyNews: NewsItem = {
   id: "",
   title: "",
+  titleTranslations: {},
   content: "",
+  contentTranslations: {},
   coverImage: "",
   gallery: [],
   createdAt: "",
@@ -140,15 +163,18 @@ function FloatingInput({
   invalid?: boolean;
 }) {
   return (
-    <div className="relative">
+    <div className="relative min-w-0">
       <Input
         {...props}
         placeholder=" "
-        className={cn("peer h-11 pt-4 placeholder:text-transparent", className)}
+        className={cn(
+          "peer h-11 pt-4 placeholder:text-transparent min-w-0",
+          className,
+        )}
       />
       <label
         className={cn(
-          "pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 bg-card px-1 text-sm text-muted-foreground transition-all",
+          "pointer-events-none absolute left-2 md:left-3 top-1/2 -translate-y-1/2 bg-card px-1 text-xs md:text-sm text-muted-foreground transition-all",
           "peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-xs peer-focus:text-foreground",
           "peer-[&:not(:placeholder-shown)]:top-0 peer-[&:not(:placeholder-shown)]:-translate-y-1/2 peer-[&:not(:placeholder-shown)]:text-xs peer-[&:not(:placeholder-shown)]:text-foreground",
           invalid &&
@@ -169,11 +195,14 @@ function FloatingTextarea({
   label: string;
 }) {
   return (
-    <div className="relative">
+    <div className="relative min-w-0">
       <Textarea
         {...props}
         placeholder=" "
-        className={cn("peer pt-6 placeholder:text-transparent", className)}
+        className={cn(
+          "peer pt-6 placeholder:text-transparent min-w-0",
+          className,
+        )}
       />
       <label className="pointer-events-none absolute left-3 top-4 bg-card px-1 text-sm text-muted-foreground transition-all peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-xs peer-focus:text-foreground peer-[&:not(:placeholder-shown)]:top-0 peer-[&:not(:placeholder-shown)]:-translate-y-1/2 peer-[&:not(:placeholder-shown)]:text-xs peer-[&:not(:placeholder-shown)]:text-foreground">
         {label}
@@ -201,18 +230,156 @@ async function uploadImage(file: File, folder: string) {
   return data.url as string;
 }
 
+const adminTranslations = {
+  th: {
+    dashboard: "Admin Dashboard",
+    logout: "Logout",
+    hero: "Hero",
+    catalogue: "Catalogue",
+    blog: "Blog",
+    news: "News",
+    info: "ข้อมูลหน้าเกี่ยวกับเรา",
+    updateStatus: "Update Status",
+    addEditHero: "เพิ่ม / แก้ไข Hero",
+    addEditCactus: "เพิ่ม / แก้ไข กระบองเพชร",
+    addEditBlog: "เพิ่ม / แก้ไข Blog",
+    addEditNews: "เพิ่ม / แก้ไข News",
+    save: "บันทึก",
+    edit: "แก้ไข",
+    delete: "ลบ",
+    heroList: "รายการ Hero",
+    cactusList: "รายการกระบองเพชร",
+    blogList: "รายการ Blog",
+    newsList: "รายการ News",
+    title: "ชื่อ",
+    subtitle: "คำบรรยาย",
+    buttonLabel: "ข้อความปุ่ม",
+    buttonHref: "ลิงก์ปุ่ม",
+    showPrimaryButton: "แสดงปุ่มหลัก",
+    showSecondaryButton: "แสดงปุ่มรอง",
+    secondaryButtonLabel: "ข้อความปุ่มรอง",
+    secondaryButtonHref: "ลิงก์ปุ่มรอง",
+    imageUrl: "URL รูปภาพ",
+    uploadHeroImage: "อัพโหลดรูปภาพ Hero",
+    uploadCoverImage: "อัพโหลดรูปภาพปก",
+    galleryImages: "รูปภาพในแกลเลอรี่ (สูงสุด 8)",
+    currentGalleryCount: "จำนวนรูปปัจจุบัน",
+    uploadCactusImages: "อัพโหลดรูปภาพกระบองเพชร",
+    topImage: "รูปด้านบน",
+    side1Image: "รูปด้านข้าง 1",
+    side2Image: "รูปด้านข้าง 2",
+    side3Image: "รูปด้านข้าง 3",
+    name: "ชื่อ",
+    family: "วงศ์",
+    sizeCm: "ขนาด (ซม.)",
+    price: "ราคา",
+    growType: "วิธีการเจริญเติบ",
+    seed: "เมล็ด",
+    graft: "กราฟ",
+    description: "คำอธิบาย",
+    excerpt: "บทสรุป",
+    content: "เนื้อหา",
+    searchById: "ค้นหาตาม ID",
+    searchByCactusId: "ค้นหาตาม ID กระบองเพชร",
+    all: "ทั้งหมด",
+    available: "รอขาย",
+    reserved: "ที่จองแล้ว",
+    sold: "ที่ขายแล้ว",
+    active: "ใช้งาน",
+    uploadImage: "อัพโหลดรูปภาพ",
+    savedSuccessfully: "บันทึกสำเร็จ",
+    searchCatalogue: "ค้นหากระบองเพชร...",
+    imageMinSize:
+      "รูปภาพต้องมีขนาดอย่างน้อย 1920x1080px\nขนาดปัจจุบัน: {width}x{height}",
+    minSize: "ขนาดขั้นต่ำ: 1920 x 1080px (16:9)",
+  },
+  en: {
+    dashboard: "Admin Dashboard",
+    logout: "Logout",
+    hero: "Hero",
+    catalogue: "Catalogue",
+    blog: "Blog",
+    news: "News",
+    info: "About Page Info",
+    updateStatus: "Update Status",
+    addEditHero: "Add / Edit Hero",
+    addEditCactus: "Add / Edit Cactus",
+    addEditBlog: "Add / Edit Blog",
+    addEditNews: "Add / Edit News",
+    save: "Save",
+    edit: "Edit",
+    delete: "Delete",
+    heroList: "Hero List",
+    cactusList: "Cactus List",
+    blogList: "Blog List",
+    newsList: "News List",
+    title: "Title",
+    subtitle: "Subtitle",
+    buttonLabel: "Button Label",
+    buttonHref: "Button Href",
+    showPrimaryButton: "Show Primary Button",
+    showSecondaryButton: "Show Secondary Button",
+    secondaryButtonLabel: "Secondary Button Label",
+    secondaryButtonHref: "Secondary Button Href",
+    imageUrl: "Image URL",
+    uploadHeroImage: "Upload Hero Image",
+    uploadCoverImage: "Upload Cover Image",
+    galleryImages: "Gallery Images (max 8)",
+    currentGalleryCount: "Current gallery count",
+    uploadCactusImages: "Upload Cactus Images",
+    topImage: "Top Image",
+    side1Image: "Side 1 Image",
+    side2Image: "Side 2 Image",
+    side3Image: "Side 3 Image",
+    name: "Name",
+    family: "Family",
+    sizeCm: "Size (cm)",
+    price: "Price",
+    growType: "Grow Type",
+    seed: "Seed",
+    graft: "Graft",
+    description: "Description",
+    excerpt: "Excerpt",
+    content: "Content",
+    searchById: "Search by ID",
+    searchByCactusId: "Search by Cactus ID",
+    all: "All",
+    available: "Available",
+    reserved: "Reserved",
+    sold: "Sold",
+    active: "Active",
+    uploadImage: "Upload Image",
+    savedSuccessfully: "Saved successfully",
+    searchCatalogue: "Search catalogue...",
+    imageMinSize:
+      "Image must be at least 1920x1080px\nCurrent size: {width}x{height}",
+    minSize: "Minimum size: 1920 x 1080px (16:9)",
+  },
+};
+
 export default function AdminPage() {
   const router = useRouter();
+  const [adminLang, setAdminLang] = useState<"th" | "en">("th");
   const [tab, setTab] = useState<
-    "heroes" | "catalogue" | "blogs" | "news" | "sold"
+    "heroes" | "catalogue" | "blogs" | "news" | "sold" | "info"
   >("heroes");
 
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean;
+    kind: "cacti" | "blogs" | "heroes" | "news" | null;
+    id: string | null;
+    name: string;
+  }>({ open: false, kind: null, id: null, name: "" });
+
+  const t = adminTranslations[adminLang];
+
   const tabItems: Array<{ key: typeof tab; label: string }> = [
-    { key: "heroes", label: "Hero" },
-    { key: "catalogue", label: "Catalogue" },
-    { key: "blogs", label: "Blog" },
-    { key: "news", label: "News" },
-    { key: "sold", label: "Update Status" },
+    { key: "heroes", label: t.hero },
+    { key: "catalogue", label: t.catalogue },
+    { key: "blogs", label: t.blog },
+    { key: "news", label: t.news },
+    { key: "info", label: t.info || "Info" },
+    { key: "sold", label: t.updateStatus },
   ];
 
   const statusLabel = (item: CactusItem) => {
@@ -227,9 +394,9 @@ export default function AdminPage() {
     return "available";
   };
 
-  const [statusView, setStatusView] = useState<"all" | "reserved" | "sold">(
-    "all",
-  );
+  const [statusView, setStatusView] = useState<
+    "all" | "available" | "reserved" | "sold"
+  >("all");
 
   const [cacti, setCacti] = useState<CactusItem[]>([]);
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
@@ -242,6 +409,41 @@ export default function AdminPage() {
   const [heroEditForm, setHeroEditForm] = useState<HeroItem>(emptyHero);
   const [heroEditOpen, setHeroEditOpen] = useState(false);
   const [newsForm, setNewsForm] = useState<NewsItem>(emptyNews);
+  const [primaryButtonLinkMode, setPrimaryButtonLinkMode] = useState<
+    "predefined" | "custom"
+  >("predefined");
+  const [secondaryButtonLinkMode, setSecondaryButtonLinkMode] = useState<
+    "predefined" | "custom"
+  >("predefined");
+  const [editPrimaryButtonLinkMode, setEditPrimaryButtonLinkMode] = useState<
+    "predefined" | "custom"
+  >("predefined");
+  const [editSecondaryButtonLinkMode, setEditSecondaryButtonLinkMode] =
+    useState<"predefined" | "custom">("predefined");
+  const [aboutForm, setAboutForm] = useState({
+    whoWeAre: "",
+    whoWeAreDesc: "",
+    ourMission: "",
+    ourMissionDesc: "",
+    step1Title: "",
+    step1Desc: "",
+    step2Title: "",
+    step2Desc: "",
+    step3Title: "",
+    step3Desc: "",
+    contactEmail: "cactistockfiles@gmail.com",
+    contactLine: "cactistockfiles",
+    showLine: true,
+    additionalInfo: "",
+    facebook: "",
+    showFacebook: false,
+    instagram: "",
+    showInstagram: false,
+    tiktok: "",
+    showTiktok: false,
+    youtube: "",
+    showYoutube: false,
+  });
   const [cactusRequiredErrors, setCactusRequiredErrors] =
     useState<CactusRequiredErrors>(emptyCactusRequiredErrors);
 
@@ -253,12 +455,14 @@ export default function AdminPage() {
   const [busy, setBusy] = useState(false);
 
   const loadData = useCallback(async () => {
-    const [cactiRes, blogsRes, heroesRes, newsRes] = await Promise.all([
-      fetch("/api/admin/cacti"),
-      fetch("/api/admin/blogs"),
-      fetch("/api/admin/heroes"),
-      fetch("/api/admin/news"),
-    ]);
+    const [cactiRes, blogsRes, heroesRes, newsRes, aboutRes] =
+      await Promise.all([
+        fetch("/api/admin/cacti"),
+        fetch("/api/admin/blogs"),
+        fetch("/api/admin/heroes"),
+        fetch("/api/admin/news"),
+        fetch("/api/admin/about"),
+      ]);
 
     if (
       [cactiRes, blogsRes, heroesRes, newsRes].some((x) => x.status === 401)
@@ -271,6 +475,11 @@ export default function AdminPage() {
     setBlogs(await blogsRes.json());
     setHeroes((await heroesRes.json()).map(normalizeHeroFormValue));
     setNews(await newsRes.json());
+
+    if (aboutRes.ok) {
+      const aboutData = await aboutRes.json();
+      setAboutForm(aboutData);
+    }
   }, [router]);
 
   useEffect(() => {
@@ -285,6 +494,9 @@ export default function AdminPage() {
   const statusRows = useMemo(() => {
     return {
       all: filteredSoldRows,
+      available: filteredSoldRows.filter(
+        (item) => statusLabel(item) === "available",
+      ),
       reserved: filteredSoldRows.filter(
         (item) => statusLabel(item) === "reserved",
       ),
@@ -314,6 +526,21 @@ export default function AdminPage() {
     router.push("/admin/login");
   }
 
+  async function translateText(text: string, sourceLang: string) {
+    try {
+      const response = await fetch("/api/admin/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, sourceLang }),
+      });
+      const data = await response.json();
+      return data.translations;
+    } catch (error) {
+      console.error("Translation error:", error);
+      return {};
+    }
+  }
+
   async function saveCactus(e: FormEvent) {
     e.preventDefault();
 
@@ -335,6 +562,13 @@ export default function AdminPage() {
 
     setBusy(true);
     try {
+      // Translate name and description
+      const nameTranslations = await translateText(cactusForm.name, adminLang);
+      const descriptionTranslations = await translateText(
+        cactusForm.description,
+        adminLang,
+      );
+
       const cactiIdSet = new Set(cacti.map((x) => x.id));
       const method = cactiIdSet.has(cactusForm.id) ? "PUT" : "POST";
       await fetch("/api/admin/cacti", {
@@ -342,10 +576,11 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...cactusForm,
+          nameTranslations,
+          descriptionTranslations,
           createdAt: cactusForm.createdAt || new Date().toISOString(),
         }),
       });
-      setCactusRequiredErrors(emptyCactusRequiredErrors);
       setCactusForm(emptyCactus);
       setImagePreviews({});
       await loadData();
@@ -358,15 +593,32 @@ export default function AdminPage() {
     e.preventDefault();
     setBusy(true);
     try {
+      // Translate title, excerpt, and content
+      const titleTranslations = await translateText(blogForm.title, adminLang);
+      const excerptTranslations = await translateText(
+        blogForm.excerpt,
+        adminLang,
+      );
+      const contentTranslations = await translateText(
+        blogForm.content,
+        adminLang,
+      );
+
       const blogIdSet = new Set(blogs.map((x) => x.id));
-      const method = blogIdSet.has(blogForm.id) ? "PUT" : "POST";
+      const isEdit = blogForm.id && blogIdSet.has(blogForm.id);
+      const method = isEdit ? "PUT" : "POST";
+      const payload = {
+        ...blogForm,
+        titleTranslations,
+        excerptTranslations,
+        contentTranslations,
+        id: isEdit ? blogForm.id : `blog-${Date.now()}`,
+        createdAt: blogForm.createdAt || new Date().toISOString(),
+      };
       await fetch("/api/admin/blogs", {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...blogForm,
-          createdAt: blogForm.createdAt || new Date().toISOString(),
-        }),
+        body: JSON.stringify(payload),
       });
       setBlogForm(emptyBlog);
       await loadData();
@@ -379,6 +631,21 @@ export default function AdminPage() {
     e.preventDefault();
     setBusy(true);
     try {
+      // Translate title, subtitle, and button labels
+      const titleTranslations = await translateText(heroForm.title, adminLang);
+      const subtitleTranslations = await translateText(
+        heroForm.subtitle,
+        adminLang,
+      );
+      const buttonLabelTranslations = await translateText(
+        heroForm.buttonLabel,
+        adminLang,
+      );
+      const secondaryButtonLabelTranslations = await translateText(
+        heroForm.secondaryButtonLabel,
+        adminLang,
+      );
+
       const isEdit = !!heroForm.id && heroes.some((x) => x.id === heroForm.id);
       const method = isEdit ? "PUT" : "POST";
       const nextOrder =
@@ -389,6 +656,10 @@ export default function AdminPage() {
         ...normalizeHeroFormValue(heroForm),
         id: heroForm.id || `hero-${Date.now()}`,
         order: isEdit ? heroForm.order : nextOrder,
+        titleTranslations,
+        subtitleTranslations,
+        buttonLabelTranslations,
+        secondaryButtonLabelTranslations,
         buttonLabel: heroForm.showPrimaryButton ? heroForm.buttonLabel : "",
         buttonHref: heroForm.showPrimaryButton ? heroForm.buttonHref : "",
         secondaryButtonLabel: heroForm.showSecondaryButton
@@ -412,21 +683,57 @@ export default function AdminPage() {
   }
 
   function openHeroEdit(row: HeroItem) {
-    setHeroEditForm(normalizeHeroFormValue(row));
+    const normalized = normalizeHeroFormValue(row);
+    setHeroEditForm(normalized);
+
+    // Determine link modes based on current href values
+    const isPrimaryCustom = !pageLinks.some(
+      (p) => p.value === normalized.buttonHref && p.value !== "custom",
+    );
+    const isSecondaryCustom = !pageLinks.some(
+      (p) => p.value === normalized.secondaryButtonHref && p.value !== "custom",
+    );
+
+    setEditPrimaryButtonLinkMode(isPrimaryCustom ? "custom" : "predefined");
+    setEditSecondaryButtonLinkMode(isSecondaryCustom ? "custom" : "predefined");
     setHeroEditOpen(true);
   }
 
   function cancelHeroEdit() {
     setHeroEditOpen(false);
     setHeroEditForm(emptyHero);
+    setEditPrimaryButtonLinkMode("predefined");
+    setEditSecondaryButtonLinkMode("predefined");
   }
 
   async function saveHeroEdit(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
     try {
+      // Translate title, subtitle, and button labels
+      const titleTranslations = await translateText(
+        heroEditForm.title,
+        adminLang,
+      );
+      const subtitleTranslations = await translateText(
+        heroEditForm.subtitle,
+        adminLang,
+      );
+      const buttonLabelTranslations = await translateText(
+        heroEditForm.buttonLabel,
+        adminLang,
+      );
+      const secondaryButtonLabelTranslations = await translateText(
+        heroEditForm.secondaryButtonLabel,
+        adminLang,
+      );
+
       const payload: HeroItem = {
         ...normalizeHeroFormValue(heroEditForm),
+        titleTranslations,
+        subtitleTranslations,
+        buttonLabelTranslations,
+        secondaryButtonLabelTranslations,
         buttonLabel: heroEditForm.showPrimaryButton
           ? heroEditForm.buttonLabel
           : "",
@@ -458,20 +765,133 @@ export default function AdminPage() {
     e.preventDefault();
     setBusy(true);
     try {
+      // Translate title and content
+      const titleTranslations = await translateText(newsForm.title, adminLang);
+      const contentTranslations = await translateText(
+        newsForm.content,
+        adminLang,
+      );
+
       const newsIdSet = new Set(news.map((x) => x.id));
-      const method = newsIdSet.has(newsForm.id) ? "PUT" : "POST";
+      const isEdit = newsForm.id && newsIdSet.has(newsForm.id);
+      const method = isEdit ? "PUT" : "POST";
+      const payload = {
+        ...newsForm,
+        titleTranslations,
+        contentTranslations,
+        id: isEdit ? newsForm.id : `news-${Date.now()}`,
+        createdAt: newsForm.createdAt || new Date().toISOString(),
+      };
       await fetch("/api/admin/news", {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...newsForm,
-          createdAt: newsForm.createdAt || new Date().toISOString(),
-        }),
+        body: JSON.stringify(payload),
       });
       setNewsForm(emptyNews);
       await loadData();
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function saveAbout(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      // Translate all text fields
+      const whoWeAreTranslations = await translateText(
+        aboutForm.whoWeAre,
+        adminLang,
+      );
+      const whoWeAreDescTranslations = await translateText(
+        aboutForm.whoWeAreDesc,
+        adminLang,
+      );
+      const ourMissionTranslations = await translateText(
+        aboutForm.ourMission,
+        adminLang,
+      );
+      const ourMissionDescTranslations = await translateText(
+        aboutForm.ourMissionDesc,
+        adminLang,
+      );
+      const step1TitleTranslations = await translateText(
+        aboutForm.step1Title,
+        adminLang,
+      );
+      const step1DescTranslations = await translateText(
+        aboutForm.step1Desc,
+        adminLang,
+      );
+      const step2TitleTranslations = await translateText(
+        aboutForm.step2Title,
+        adminLang,
+      );
+      const step2DescTranslations = await translateText(
+        aboutForm.step2Desc,
+        adminLang,
+      );
+      const step3TitleTranslations = await translateText(
+        aboutForm.step3Title,
+        adminLang,
+      );
+      const step3DescTranslations = await translateText(
+        aboutForm.step3Desc,
+        adminLang,
+      );
+      const additionalInfoTranslations = await translateText(
+        aboutForm.additionalInfo,
+        adminLang,
+      );
+
+      const payload = {
+        ...aboutForm,
+        whoWeAreTranslations,
+        whoWeAreDescTranslations,
+        ourMissionTranslations,
+        ourMissionDescTranslations,
+        step1TitleTranslations,
+        step1DescTranslations,
+        step2TitleTranslations,
+        step2DescTranslations,
+        step3TitleTranslations,
+        step3DescTranslations,
+        additionalInfoTranslations,
+      };
+
+      await fetch("/api/admin/about", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      alert(t.savedSuccessfully);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function confirmDelete(
+    kind: "cacti" | "blogs" | "heroes" | "news",
+    id: string,
+    name: string,
+  ) {
+    setDeleteDialog({ open: true, kind, id, name });
+  }
+
+  async function executeDelete() {
+    if (!deleteDialog.kind || !deleteDialog.id) return;
+    setBusy(true);
+    try {
+      await fetch(
+        `/api/admin/${deleteDialog.kind}?id=${encodeURIComponent(deleteDialog.id)}`,
+        {
+          method: "DELETE",
+        },
+      );
+      await loadData();
+    } finally {
+      setBusy(false);
+      setDeleteDialog({ open: false, kind: null, id: null, name: "" });
     }
   }
 
@@ -494,14 +914,41 @@ export default function AdminPage() {
     await loadData();
   }
 
+  async function changeStatus(id: string, status: string) {
+    await fetch("/api/admin/status", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, status }),
+    });
+    await loadData();
+  }
+
   return (
-    <main className="min-h-screen bg-muted/20 p-4 md:p-8">
-      <div className="mx-auto max-w-7xl rounded-xl border bg-card p-4 md:p-6 space-y-4">
+    <main className="min-h-screen bg-muted/20 p-2 md:p-8">
+      <div className="mx-auto max-w-full md:max-w-7xl rounded-xl border bg-card p-2 md:p-6 space-y-4 overflow-x-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="font-display text-2xl font-bold">Admin Dashboard</h1>
-          <Button variant="outline" onClick={logout}>
-            Logout
-          </Button>
+          <h1 className="font-display text-2xl font-bold">{t.dashboard}</h1>
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Languages className="h-4 w-4 mr-2" />
+                  {adminLang === "th" ? "TH" : "EN"}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setAdminLang("th")}>
+                  {adminLang === "th" ? "ไทย (TH)" : "Thai (TH)"}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setAdminLang("en")}>
+                  English (EN)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button variant="outline" onClick={logout}>
+              {t.logout}
+            </Button>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -523,16 +970,17 @@ export default function AdminPage() {
               onSubmit={saveCactus}
               className="space-y-3 rounded-lg border p-4"
             >
-              <h2 className="font-semibold">Add / Edit Catalogue</h2>
+              <h2 className="font-semibold">{t.addEditCactus}</h2>
               <div className="space-y-2">
                 <FloatingInput
-                  label="1. id"
+                  label="1. ID"
                   invalid={cactusRequiredErrors.id}
                   value={cactusForm.id}
                   onChange={(e) => {
                     setCactusRequiredErrors((prev) => ({ ...prev, id: false }));
                     setCactusForm({ ...cactusForm, id: e.target.value });
                   }}
+                  required
                 />
               </div>
 
@@ -569,16 +1017,17 @@ export default function AdminPage() {
                   <option value="" disabled>
                     Select family
                   </option>
-                  {cactusFamilyOptions.map((family) => (
-                    <option key={family} value={family}>
-                      {family}
+                  {cactusFamilyOptions.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
                     </option>
                   ))}
-                  <option value="__other__">อื่นๆ (ใส่เอง)</option>
+                  <option value="__other__">Other</option>
                 </select>
                 {familySelectValue === "__other__" && (
                   <FloatingInput
-                    label="วงศ์ (อื่นๆ)"
+                    label="Other family"
+                    invalid={cactusRequiredErrors.family}
                     value={cactusForm.family}
                     onChange={(e) => {
                       setCactusRequiredErrors((prev) => ({
@@ -593,9 +1042,8 @@ export default function AdminPage() {
 
               <div className="space-y-2">
                 <FloatingInput
-                  label="3. name"
+                  label={`3. ${t.name}`}
                   invalid={cactusRequiredErrors.name}
-                  list="cactus-name-suggestions"
                   value={cactusForm.name}
                   onChange={(e) => {
                     setCactusRequiredErrors((prev) => ({
@@ -604,21 +1052,14 @@ export default function AdminPage() {
                     }));
                     setCactusForm({ ...cactusForm, name: e.target.value });
                   }}
+                  required
                 />
-                <datalist id="cactus-name-suggestions">
-                  {cactusNameSuggestions.map((name) => (
-                    <option key={name} value={name} />
-                  ))}
-                </datalist>
               </div>
 
               <div className="space-y-2">
-                <FieldLabel
-                  text="4. รูปแบบการปลูก"
-                  invalid={cactusRequiredErrors.growType}
-                />
+                <label className="text-sm font-medium">4. {t.growType}</label>
                 <select
-                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={cactusForm.growType}
                   onChange={(e) => {
                     setCactusRequiredErrors((prev) => ({
@@ -631,14 +1072,14 @@ export default function AdminPage() {
                     });
                   }}
                 >
-                  <option value="seed">ไม้เมล็ด</option>
-                  <option value="graft">ไม้กราฟ</option>
+                  <option value="seed">{t.seed}</option>
+                  <option value="graft">{t.graft}</option>
                 </select>
               </div>
 
               <div className="space-y-2">
                 <FloatingInput
-                  label="5. ขนาด"
+                  label={`5. ${t.sizeCm}`}
                   invalid={cactusRequiredErrors.sizeCm}
                   type="number"
                   min={0}
@@ -658,7 +1099,7 @@ export default function AdminPage() {
 
               <div className="space-y-2">
                 <FloatingInput
-                  label="6. ราคา"
+                  label={`6. ${t.price}`}
                   invalid={cactusRequiredErrors.price}
                   type="number"
                   min={0}
@@ -677,7 +1118,7 @@ export default function AdminPage() {
               </div>
 
               <FloatingTextarea
-                label="รายละเอียด"
+                label={t.description}
                 value={cactusForm.description}
                 onChange={(e) =>
                   setCactusForm({ ...cactusForm, description: e.target.value })
@@ -686,14 +1127,16 @@ export default function AdminPage() {
               />
 
               <div className="space-y-3">
-                <label className="text-sm font-medium">Upload images</label>
+                <label className="text-sm font-medium">
+                  {t.uploadCactusImages}
+                </label>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {(
                     [
-                      ["top", "รูปมุมบน"],
-                      ["side1", "รูปด้านข้าง 1"],
-                      ["side2", "รูปด้านข้าง 2"],
-                      ["side3", "รูปด้านข้าง 3"],
+                      ["top", t.topImage],
+                      ["side1", t.side1Image],
+                      ["side2", t.side2Image],
+                      ["side3", t.side3Image],
                     ] as const
                   ).map(([key, label]) => (
                     <div key={key} className="space-y-2">
@@ -741,16 +1184,16 @@ export default function AdminPage() {
               </div>
 
               <Button disabled={busy} type="submit">
-                Save cactus
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t.save}
               </Button>
             </form>
 
             <div className="rounded-lg border p-4 space-y-2">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="font-semibold">Catalogue list</h2>
+                <h2 className="font-semibold">{t.cactusList}</h2>
                 <Input
                   type="text"
-                  placeholder="Search catalogue..."
+                  placeholder={t.searchCatalogue}
                   value={catalogueSearch}
                   onChange={(e) => setCatalogueSearch(e.target.value)}
                   className="max-w-xs"
@@ -795,13 +1238,15 @@ export default function AdminPage() {
                             <DropdownMenuItem
                               onClick={() => setCactusForm(row)}
                             >
-                              Edit
+                              {t.edit}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-destructive focus:text-destructive"
-                              onClick={() => removeItem("cacti", row.id)}
+                              onClick={() =>
+                                confirmDelete("cacti", row.id, row.name)
+                              }
                             >
-                              Delete
+                              {t.delete}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -826,60 +1271,48 @@ export default function AdminPage() {
         )}
 
         {tab === "blogs" && (
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 overflow-x-hidden w-full">
             <form
               onSubmit={saveBlog}
-              className="space-y-3 rounded-lg border p-4"
+              className="space-y-3 rounded-lg border p-4 w-full min-w-0 overflow-x-hidden"
             >
-              <h2 className="font-semibold">Add / Edit Blog</h2>
+              <h2 className="font-semibold">{t.addEditBlog}</h2>
               <FloatingInput
-                label="id"
-                value={blogForm.id}
-                onChange={(e) =>
-                  setBlogForm({ ...blogForm, id: e.target.value })
-                }
-                required
-              />
-              <FloatingInput
-                label="title"
+                label={t.title}
                 value={blogForm.title}
                 onChange={(e) =>
                   setBlogForm({ ...blogForm, title: e.target.value })
                 }
                 required
-              />
-              <FloatingInput
-                label="cover image url"
-                value={blogForm.coverImage}
-                onChange={(e) =>
-                  setBlogForm({ ...blogForm, coverImage: e.target.value })
-                }
-                required
+                className="w-full max-w-full"
               />
               <FloatingTextarea
-                label="excerpt"
+                label={t.excerpt}
                 value={blogForm.excerpt}
                 onChange={(e) =>
                   setBlogForm({ ...blogForm, excerpt: e.target.value })
                 }
                 required
+                className="w-full max-w-full"
               />
               <FloatingTextarea
-                label="content"
+                label={t.content}
                 value={blogForm.content}
                 onChange={(e) =>
                   setBlogForm({ ...blogForm, content: e.target.value })
                 }
                 required
+                className="w-full max-w-full"
               />
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">
-                  Upload cover image
+                  {t.uploadCoverImage}
                 </label>
                 <Input
                   type="file"
                   accept="image/*"
+                  className="w-full max-w-full"
                   onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
@@ -890,13 +1323,12 @@ export default function AdminPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  Gallery images (max 8)
-                </label>
+                <label className="text-sm font-medium">{t.galleryImages}</label>
                 <Input
                   type="file"
                   accept="image/*"
                   multiple
+                  className="w-full max-w-full"
                   onChange={async (e) => {
                     const files = Array.from(e.target.files || []).slice(0, 8);
                     const urls = await Promise.all(
@@ -908,45 +1340,64 @@ export default function AdminPage() {
                   }}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Current gallery count: {blogForm.gallery.length}
+                  {t.currentGalleryCount}: {blogForm.gallery.length}
                 </p>
               </div>
 
-              <Button disabled={busy} type="submit">
-                Save blog
+              <Button
+                disabled={busy}
+                type="submit"
+                className="w-full max-w-full"
+              >
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t.save}
               </Button>
             </form>
 
             <div className="rounded-lg border p-4 space-y-2">
-              <h2 className="font-semibold">Blog list</h2>
+              <h2 className="font-semibold">{t.blogList}</h2>
               <div className="max-h-[540px] overflow-auto space-y-2">
                 {blogs.map((row) => (
                   <div
                     key={row.id}
                     className="flex items-center justify-between gap-2 rounded border p-2 text-sm"
                   >
-                    <div>
-                      <p className="font-medium">
-                        {row.id} - {row.title}
-                      </p>
-                      <p className="text-muted-foreground">
-                        gallery {row.gallery.length} / 8
-                      </p>
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      {row.coverImage && (
+                        <img
+                          src={row.coverImage}
+                          alt={row.title}
+                          className="h-10 w-10 md:h-12 md:w-12 rounded-md object-cover flex-shrink-0"
+                        />
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-medium truncate text-xs md:text-sm">
+                          {row.id} - {row.title}
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          gallery {row.gallery.length} / 8
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-1 md:gap-2 flex-shrink-0">
                       <Button
                         type="button"
                         variant="outline"
+                        size="sm"
+                        className="text-xs px-2 py-1 md:text-sm md:px-3 md:py-2"
                         onClick={() => setBlogForm(row)}
                       >
-                        Edit
+                        {t.edit}
                       </Button>
                       <Button
                         type="button"
                         variant="destructive"
-                        onClick={() => removeItem("blogs", row.id)}
+                        size="sm"
+                        className="text-xs px-2 py-1 md:text-sm md:px-3 md:py-2"
+                        onClick={() =>
+                          confirmDelete("blogs", row.id, row.title)
+                        }
                       >
-                        Delete
+                        {t.delete}
                       </Button>
                     </div>
                   </div>
@@ -962,9 +1413,9 @@ export default function AdminPage() {
               onSubmit={saveHero}
               className="space-y-3 rounded-lg border p-4"
             >
-              <h2 className="font-semibold">Add / Edit Hero</h2>
+              <h2 className="font-semibold">{t.addEditHero}</h2>
               <FloatingInput
-                label="title"
+                label={t.title}
                 value={heroForm.title}
                 onChange={(e) =>
                   setHeroForm({ ...heroForm, title: e.target.value })
@@ -972,7 +1423,7 @@ export default function AdminPage() {
                 required
               />
               <FloatingInput
-                label="subtitle"
+                label={t.subtitle}
                 value={heroForm.subtitle}
                 onChange={(e) =>
                   setHeroForm({ ...heroForm, subtitle: e.target.value })
@@ -990,24 +1441,58 @@ export default function AdminPage() {
                     })
                   }
                 />
-                show primary button
+                {t.showPrimaryButton}
               </label>
               {heroForm.showPrimaryButton && (
                 <>
                   <FloatingInput
-                    label="primary button label"
+                    label={t.buttonLabel}
                     value={heroForm.buttonLabel}
                     onChange={(e) =>
                       setHeroForm({ ...heroForm, buttonLabel: e.target.value })
                     }
                   />
-                  <FloatingInput
-                    label="primary button href"
-                    value={heroForm.buttonHref}
-                    onChange={(e) =>
-                      setHeroForm({ ...heroForm, buttonHref: e.target.value })
-                    }
-                  />
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      {t.buttonHref}
+                    </label>
+                    <select
+                      value={
+                        pageLinks.some((p) => p.value === heroForm.buttonHref)
+                          ? heroForm.buttonHref
+                          : "custom"
+                      }
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === "custom") {
+                          setPrimaryButtonLinkMode("custom");
+                          setHeroForm({ ...heroForm, buttonHref: "" });
+                        } else {
+                          setPrimaryButtonLinkMode("predefined");
+                          setHeroForm({ ...heroForm, buttonHref: value });
+                        }
+                      }}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      {pageLinks.map((page) => (
+                        <option key={page.value} value={page.value}>
+                          {page.label}
+                        </option>
+                      ))}
+                    </select>
+                    {primaryButtonLinkMode === "custom" && (
+                      <Input
+                        placeholder="https://example.com"
+                        value={heroForm.buttonHref}
+                        onChange={(e) =>
+                          setHeroForm({
+                            ...heroForm,
+                            buttonHref: e.target.value,
+                          })
+                        }
+                      />
+                    )}
+                  </div>
                 </>
               )}
 
@@ -1022,12 +1507,12 @@ export default function AdminPage() {
                     })
                   }
                 />
-                show secondary button
+                {t.showSecondaryButton}
               </label>
               {heroForm.showSecondaryButton && (
                 <>
                   <FloatingInput
-                    label="secondary button label"
+                    label={t.secondaryButtonLabel}
                     value={heroForm.secondaryButtonLabel}
                     onChange={(e) =>
                       setHeroForm({
@@ -1036,21 +1521,59 @@ export default function AdminPage() {
                       })
                     }
                   />
-                  <FloatingInput
-                    label="secondary button href"
-                    value={heroForm.secondaryButtonHref}
-                    onChange={(e) =>
-                      setHeroForm({
-                        ...heroForm,
-                        secondaryButtonHref: e.target.value,
-                      })
-                    }
-                  />
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      {t.secondaryButtonHref}
+                    </label>
+                    <select
+                      value={
+                        pageLinks.some(
+                          (p) => p.value === heroForm.secondaryButtonHref,
+                        )
+                          ? heroForm.secondaryButtonHref
+                          : "custom"
+                      }
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === "custom") {
+                          setSecondaryButtonLinkMode("custom");
+                          setHeroForm({ ...heroForm, secondaryButtonHref: "" });
+                        } else {
+                          setSecondaryButtonLinkMode("predefined");
+                          setHeroForm({
+                            ...heroForm,
+                            secondaryButtonHref: value,
+                          });
+                        }
+                      }}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      {pageLinks.map((page) => (
+                        <option key={page.value} value={page.value}>
+                          {page.label}
+                        </option>
+                      ))}
+                    </select>
+                    {secondaryButtonLinkMode === "custom" && (
+                      <Input
+                        placeholder="https://example.com"
+                        value={heroForm.secondaryButtonHref}
+                        onChange={(e) =>
+                          setHeroForm({
+                            ...heroForm,
+                            secondaryButtonHref: e.target.value,
+                          })
+                        }
+                      />
+                    )}
+                  </div>
                 </>
               )}
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Upload hero image</label>
+                <label className="text-sm font-medium">
+                  {t.uploadHeroImage}
+                </label>
                 <Input
                   type="file"
                   accept="image/*"
@@ -1067,7 +1590,9 @@ export default function AdminPage() {
                     img.onload = async () => {
                       if (img.width < 1920 || img.height < 1080) {
                         alert(
-                          `รูปภาพต้องมีขนาดอย่างน้อย 1920x1080px\nขนาดปัจจุบัน: ${img.width}x${img.height}`,
+                          t.imageMinSize
+                            .replace("{width}", img.width.toString())
+                            .replace("{height}", img.height.toString()),
                         );
                         return;
                       }
@@ -1077,9 +1602,7 @@ export default function AdminPage() {
                     reader.readAsDataURL(file);
                   }}
                 />
-                <p className="text-xs text-muted-foreground">
-                  ขนาดขั้นต่ำ: 1920 x 1080px (16:9)
-                </p>
+                <p className="text-xs text-muted-foreground">{t.minSize}</p>
                 {heroForm.imageUrl && (
                   <div className="aspect-video w-full rounded-md border overflow-hidden">
                     <img
@@ -1099,16 +1622,16 @@ export default function AdminPage() {
                     setHeroForm({ ...heroForm, active: e.target.checked })
                   }
                 />
-                active
+                {t.active}
               </label>
 
               <Button disabled={busy} type="submit">
-                Save hero
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t.save}
               </Button>
             </form>
 
             <div className="rounded-lg border p-4 space-y-2">
-              <h2 className="font-semibold">Hero list</h2>
+              <h2 className="font-semibold">{t.heroList}</h2>
               <div className="max-h-[540px] overflow-auto grid gap-3 sm:grid-cols-2">
                 {heroes.map((row) => (
                   <div
@@ -1126,7 +1649,7 @@ export default function AdminPage() {
                         {row.subtitle}
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {row.active ? "active" : "inactive"}
+                        {row.active ? t.active : "inactive"}
                       </p>
                     </div>
 
@@ -1146,13 +1669,15 @@ export default function AdminPage() {
                             openHeroEdit(row);
                           }}
                         >
-                          Edit
+                          {t.edit}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive focus:text-destructive"
-                          onClick={() => removeItem("heroes", row.id)}
+                          onClick={() =>
+                            confirmDelete("heroes", row.id, row.title)
+                          }
                         >
-                          Delete
+                          {t.delete}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -1228,16 +1753,55 @@ export default function AdminPage() {
                           })
                         }
                       />
-                      <FloatingInput
-                        label="primary button href"
-                        value={heroEditForm.buttonHref}
-                        onChange={(e) =>
-                          setHeroEditForm({
-                            ...heroEditForm,
-                            buttonHref: e.target.value,
-                          })
-                        }
-                      />
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">
+                          primary button href
+                        </label>
+                        <select
+                          value={
+                            pageLinks.some(
+                              (p) => p.value === heroEditForm.buttonHref,
+                            )
+                              ? heroEditForm.buttonHref
+                              : "custom"
+                          }
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === "custom") {
+                              setEditPrimaryButtonLinkMode("custom");
+                              setHeroEditForm({
+                                ...heroEditForm,
+                                buttonHref: "",
+                              });
+                            } else {
+                              setEditPrimaryButtonLinkMode("predefined");
+                              setHeroEditForm({
+                                ...heroEditForm,
+                                buttonHref: value,
+                              });
+                            }
+                          }}
+                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        >
+                          {pageLinks.map((page) => (
+                            <option key={page.value} value={page.value}>
+                              {page.label}
+                            </option>
+                          ))}
+                        </select>
+                        {editPrimaryButtonLinkMode === "custom" && (
+                          <Input
+                            placeholder="https://example.com"
+                            value={heroEditForm.buttonHref}
+                            onChange={(e) =>
+                              setHeroEditForm({
+                                ...heroEditForm,
+                                buttonHref: e.target.value,
+                              })
+                            }
+                          />
+                        )}
+                      </div>
                     </>
                   )}
 
@@ -1266,16 +1830,56 @@ export default function AdminPage() {
                           })
                         }
                       />
-                      <FloatingInput
-                        label="secondary button href"
-                        value={heroEditForm.secondaryButtonHref}
-                        onChange={(e) =>
-                          setHeroEditForm({
-                            ...heroEditForm,
-                            secondaryButtonHref: e.target.value,
-                          })
-                        }
-                      />
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">
+                          secondary button href
+                        </label>
+                        <select
+                          value={
+                            pageLinks.some(
+                              (p) =>
+                                p.value === heroEditForm.secondaryButtonHref,
+                            )
+                              ? heroEditForm.secondaryButtonHref
+                              : "custom"
+                          }
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === "custom") {
+                              setEditSecondaryButtonLinkMode("custom");
+                              setHeroEditForm({
+                                ...heroEditForm,
+                                secondaryButtonHref: "",
+                              });
+                            } else {
+                              setEditSecondaryButtonLinkMode("predefined");
+                              setHeroEditForm({
+                                ...heroEditForm,
+                                secondaryButtonHref: value,
+                              });
+                            }
+                          }}
+                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        >
+                          {pageLinks.map((page) => (
+                            <option key={page.value} value={page.value}>
+                              {page.label}
+                            </option>
+                          ))}
+                        </select>
+                        {editSecondaryButtonLinkMode === "custom" && (
+                          <Input
+                            placeholder="https://example.com"
+                            value={heroEditForm.secondaryButtonHref}
+                            onChange={(e) =>
+                              setHeroEditForm({
+                                ...heroEditForm,
+                                secondaryButtonHref: e.target.value,
+                              })
+                            }
+                          />
+                        )}
+                      </div>
                     </>
                   )}
 
@@ -1299,7 +1903,9 @@ export default function AdminPage() {
                         img.onload = async () => {
                           if (img.width < 1920 || img.height < 1080) {
                             alert(
-                              `รูปภาพต้องมีขนาดอย่างน้อย 1920x1080px\nขนาดปัจจุบัน: ${img.width}x${img.height}`,
+                              t.imageMinSize
+                                .replace("{width}", img.width.toString())
+                                .replace("{height}", img.height.toString()),
                             );
                             return;
                           }
@@ -1352,7 +1958,11 @@ export default function AdminPage() {
                       Cancel
                     </Button>
                     <Button disabled={busy} type="submit">
-                      Save
+                      {busy ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Save"
+                      )}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -1362,44 +1972,39 @@ export default function AdminPage() {
         )}
 
         {tab === "news" && (
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 overflow-x-hidden w-full">
             <form
               onSubmit={saveNews}
-              className="space-y-3 rounded-lg border p-4"
+              className="space-y-3 rounded-lg border p-4 w-full min-w-0 overflow-x-hidden"
             >
-              <h2 className="font-semibold">Add / Edit News</h2>
+              <h2 className="font-semibold">{t.addEditNews}</h2>
               <FloatingInput
-                label="id"
-                value={newsForm.id}
-                onChange={(e) =>
-                  setNewsForm({ ...newsForm, id: e.target.value })
-                }
-                required
-              />
-              <FloatingInput
-                label="title"
+                label={t.title}
                 value={newsForm.title}
                 onChange={(e) =>
                   setNewsForm({ ...newsForm, title: e.target.value })
                 }
                 required
+                className="w-full max-w-full"
               />
               <FloatingTextarea
-                label="content"
+                label={t.content}
                 value={newsForm.content}
                 onChange={(e) =>
                   setNewsForm({ ...newsForm, content: e.target.value })
                 }
                 required
+                className="w-full max-w-full"
               />
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">
-                  Upload cover image
+                  {t.uploadCoverImage}
                 </label>
                 <Input
                   type="file"
                   accept="image/*"
+                  className="w-full max-w-full"
                   onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
@@ -1417,13 +2022,12 @@ export default function AdminPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  Gallery images (max 8)
-                </label>
+                <label className="text-sm font-medium">{t.galleryImages}</label>
                 <Input
                   type="file"
                   accept="image/*"
                   multiple
+                  className="w-full max-w-full"
                   onChange={async (e) => {
                     const files = Array.from(e.target.files || []).slice(0, 8);
                     const urls = await Promise.all(
@@ -1432,6 +2036,9 @@ export default function AdminPage() {
                     setNewsForm((prev) => ({ ...prev, gallery: urls }));
                   }}
                 />
+                <p className="text-xs text-muted-foreground">
+                  {t.currentGalleryCount}: {newsForm.gallery.length}
+                </p>
                 <div className="grid grid-cols-4 gap-2">
                   {newsForm.gallery.map((url, idx) => (
                     <img
@@ -1444,41 +2051,58 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              <Button disabled={busy} type="submit">
-                Save news
+              <Button
+                disabled={busy}
+                type="submit"
+                className="w-full max-w-full"
+              >
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t.save}
               </Button>
             </form>
 
             <div className="rounded-lg border p-4 space-y-2">
-              <h2 className="font-semibold">News list</h2>
+              <h2 className="font-semibold">{t.newsList}</h2>
               <div className="max-h-[540px] overflow-auto space-y-2">
                 {news.map((row) => (
                   <div
                     key={row.id}
                     className="flex items-center justify-between gap-2 rounded border p-2 text-sm"
                   >
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">
-                        {row.id} - {row.title}
-                      </p>
-                      <p className="text-muted-foreground">
-                        gallery {row.gallery.length} / 8
-                      </p>
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      {row.coverImage && (
+                        <img
+                          src={row.coverImage}
+                          alt={row.title}
+                          className="h-10 w-10 md:h-12 md:w-12 rounded-md object-cover flex-shrink-0"
+                        />
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-medium truncate text-xs md:text-sm">
+                          {row.id} - {row.title}
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          gallery {row.gallery.length} / 8
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-1 md:gap-2 flex-shrink-0">
                       <Button
                         type="button"
                         variant="outline"
+                        size="sm"
+                        className="text-xs px-2 py-1 md:text-sm md:px-3 md:py-2"
                         onClick={() => setNewsForm(row)}
                       >
-                        Edit
+                        {t.edit}
                       </Button>
                       <Button
                         type="button"
                         variant="destructive"
-                        onClick={() => removeItem("news", row.id)}
+                        size="sm"
+                        className="text-xs px-2 py-1 md:text-sm md:px-3 md:py-2"
+                        onClick={() => confirmDelete("news", row.id, row.title)}
                       >
-                        Delete
+                        {t.delete}
                       </Button>
                     </div>
                   </div>
@@ -1488,11 +2112,412 @@ export default function AdminPage() {
           </div>
         )}
 
+        {tab === "info" && (
+          <div className="max-w-3xl mx-auto">
+            <form
+              onSubmit={saveAbout}
+              className="space-y-4 rounded-lg border p-6"
+            >
+              <h2 className="font-semibold text-lg">
+                {adminLang === "th"
+                  ? "แก้ไขหน้าเกี่ยวกับเรา"
+                  : "Edit About Page"}
+              </h2>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  {adminLang === "th"
+                    ? "เราคือใคร (หัวข้อ)"
+                    : "Who We Are (Title)"}
+                </label>
+                <Input
+                  value={aboutForm.whoWeAre}
+                  onChange={(e) =>
+                    setAboutForm({ ...aboutForm, whoWeAre: e.target.value })
+                  }
+                  placeholder={
+                    adminLang === "th" ? "เราคือใคร..." : "Who we are..."
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  {adminLang === "th"
+                    ? "เราคือใคร (รายละเอียด)"
+                    : "Who We Are (Description)"}
+                </label>
+                <Textarea
+                  value={aboutForm.whoWeAreDesc}
+                  onChange={(e) =>
+                    setAboutForm({ ...aboutForm, whoWeAreDesc: e.target.value })
+                  }
+                  placeholder={
+                    adminLang === "th" ? "รายละเอียด..." : "Description..."
+                  }
+                  rows={4}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  {adminLang === "th"
+                    ? "พันธกิจของเรา (หัวข้อ)"
+                    : "Our Mission (Title)"}
+                </label>
+                <Input
+                  value={aboutForm.ourMission}
+                  onChange={(e) =>
+                    setAboutForm({ ...aboutForm, ourMission: e.target.value })
+                  }
+                  placeholder={
+                    adminLang === "th" ? "พันธกิจของเรา..." : "Our mission..."
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  {adminLang === "th"
+                    ? "พันธกิจของเรา (รายละเอียด)"
+                    : "Our Mission (Description)"}
+                </label>
+                <Textarea
+                  value={aboutForm.ourMissionDesc}
+                  onChange={(e) =>
+                    setAboutForm({
+                      ...aboutForm,
+                      ourMissionDesc: e.target.value,
+                    })
+                  }
+                  placeholder={
+                    adminLang === "th" ? "รายละเอียด..." : "Description..."
+                  }
+                  rows={4}
+                />
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="font-semibold">
+                  {adminLang === "th" ? "วิธีการสั่งซื้อ" : "How to Order"}
+                </h3>
+
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      {adminLang === "th"
+                        ? "ขั้นตอนที่ 1 (หัวข้อ)"
+                        : "Step 1 (Title)"}
+                    </label>
+                    <Input
+                      value={aboutForm.step1Title}
+                      onChange={(e) =>
+                        setAboutForm({
+                          ...aboutForm,
+                          step1Title: e.target.value,
+                        })
+                      }
+                      placeholder={
+                        adminLang === "th" ? "ขั้นตอนที่ 1..." : "Step 1..."
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      {adminLang === "th"
+                        ? "ขั้นตอนที่ 2 (หัวข้อ)"
+                        : "Step 2 (Title)"}
+                    </label>
+                    <Input
+                      value={aboutForm.step2Title}
+                      onChange={(e) =>
+                        setAboutForm({
+                          ...aboutForm,
+                          step2Title: e.target.value,
+                        })
+                      }
+                      placeholder={
+                        adminLang === "th" ? "ขั้นตอนที่ 2..." : "Step 2..."
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      {adminLang === "th"
+                        ? "ขั้นตอนที่ 3 (หัวข้อ)"
+                        : "Step 3 (Title)"}
+                    </label>
+                    <Input
+                      value={aboutForm.step3Title}
+                      onChange={(e) =>
+                        setAboutForm({
+                          ...aboutForm,
+                          step3Title: e.target.value,
+                        })
+                      }
+                      placeholder={
+                        adminLang === "th" ? "ขั้นตอนที่ 3..." : "Step 3..."
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      {adminLang === "th"
+                        ? "ขั้นตอนที่ 1 (รายละเอียด)"
+                        : "Step 1 (Description)"}
+                    </label>
+                    <Textarea
+                      value={aboutForm.step1Desc}
+                      onChange={(e) =>
+                        setAboutForm({
+                          ...aboutForm,
+                          step1Desc: e.target.value,
+                        })
+                      }
+                      placeholder={
+                        adminLang === "th" ? "รายละเอียด..." : "Description..."
+                      }
+                      rows={3}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      {adminLang === "th"
+                        ? "ขั้นตอนที่ 2 (รายละเอียด)"
+                        : "Step 2 (Description)"}
+                    </label>
+                    <Textarea
+                      value={aboutForm.step2Desc}
+                      onChange={(e) =>
+                        setAboutForm({
+                          ...aboutForm,
+                          step2Desc: e.target.value,
+                        })
+                      }
+                      placeholder={
+                        adminLang === "th" ? "รายละเอียด..." : "Description..."
+                      }
+                      rows={3}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      {adminLang === "th"
+                        ? "ขั้นตอนที่ 3 (รายละเอียด)"
+                        : "Step 3 (Description)"}
+                    </label>
+                    <Textarea
+                      value={aboutForm.step3Desc}
+                      onChange={(e) =>
+                        setAboutForm({
+                          ...aboutForm,
+                          step3Desc: e.target.value,
+                        })
+                      }
+                      placeholder={
+                        adminLang === "th" ? "รายละเอียด..." : "Description..."
+                      }
+                      rows={3}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  {adminLang === "th" ? "อีเมลติดต่อ" : "Contact Email"}
+                </label>
+                <Input
+                  type="email"
+                  value={aboutForm.contactEmail}
+                  onChange={(e) =>
+                    setAboutForm({ ...aboutForm, contactEmail: e.target.value })
+                  }
+                  placeholder="email@example.com"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={aboutForm.showLine}
+                    onChange={(e) =>
+                      setAboutForm({
+                        ...aboutForm,
+                        showLine: e.target.checked,
+                      })
+                    }
+                    className="mt-1"
+                  />
+                  <div className="flex-1 space-y-2">
+                    <label className="text-sm font-medium">LINE ID</label>
+                    <Input
+                      value={aboutForm.contactLine}
+                      onChange={(e) =>
+                        setAboutForm({
+                          ...aboutForm,
+                          contactLine: e.target.value,
+                        })
+                      }
+                      placeholder="line_id"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  {adminLang === "th" ? "ข้อมูลเพิ่มเติม" : "Additional Info"}
+                </label>
+                <Textarea
+                  value={aboutForm.additionalInfo}
+                  onChange={(e) =>
+                    setAboutForm({
+                      ...aboutForm,
+                      additionalInfo: e.target.value,
+                    })
+                  }
+                  placeholder={
+                    adminLang === "th"
+                      ? "ข้อมูลเพิ่มเติม..."
+                      : "Additional info..."
+                  }
+                  rows={4}
+                />
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="font-semibold">
+                  {adminLang === "th" ? "โซเชียลมีเดีย" : "Social Media"}
+                </h3>
+
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={aboutForm.showFacebook}
+                      onChange={(e) =>
+                        setAboutForm({
+                          ...aboutForm,
+                          showFacebook: e.target.checked,
+                        })
+                      }
+                      className="mt-1"
+                    />
+                    <div className="flex-1 space-y-2">
+                      <label className="text-sm font-medium">Facebook</label>
+                      <Input
+                        value={aboutForm.facebook}
+                        onChange={(e) =>
+                          setAboutForm({
+                            ...aboutForm,
+                            facebook: e.target.value,
+                          })
+                        }
+                        placeholder="https://facebook.com/..."
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={aboutForm.showInstagram}
+                      onChange={(e) =>
+                        setAboutForm({
+                          ...aboutForm,
+                          showInstagram: e.target.checked,
+                        })
+                      }
+                      className="mt-1"
+                    />
+                    <div className="flex-1 space-y-2">
+                      <label className="text-sm font-medium">Instagram</label>
+                      <Input
+                        value={aboutForm.instagram}
+                        onChange={(e) =>
+                          setAboutForm({
+                            ...aboutForm,
+                            instagram: e.target.value,
+                          })
+                        }
+                        placeholder="https://instagram.com/..."
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={aboutForm.showTiktok}
+                      onChange={(e) =>
+                        setAboutForm({
+                          ...aboutForm,
+                          showTiktok: e.target.checked,
+                        })
+                      }
+                      className="mt-1"
+                    />
+                    <div className="flex-1 space-y-2">
+                      <label className="text-sm font-medium">TikTok</label>
+                      <Input
+                        value={aboutForm.tiktok}
+                        onChange={(e) =>
+                          setAboutForm({
+                            ...aboutForm,
+                            tiktok: e.target.value,
+                          })
+                        }
+                        placeholder="https://tiktok.com/@..."
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={aboutForm.showYoutube}
+                      onChange={(e) =>
+                        setAboutForm({
+                          ...aboutForm,
+                          showYoutube: e.target.checked,
+                        })
+                      }
+                      className="mt-1"
+                    />
+                    <div className="flex-1 space-y-2">
+                      <label className="text-sm font-medium">YouTube</label>
+                      <Input
+                        value={aboutForm.youtube}
+                        onChange={(e) =>
+                          setAboutForm({
+                            ...aboutForm,
+                            youtube: e.target.value,
+                          })
+                        }
+                        placeholder="https://youtube.com/@..."
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <Button disabled={busy} type="submit">
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t.save}
+              </Button>
+            </form>
+          </div>
+        )}
+
         {tab === "sold" && (
           <div className="space-y-4 rounded-lg border p-4">
-            <h2 className="font-semibold">Update Status</h2>
+            <h2 className="font-semibold">{t.updateStatus}</h2>
             <FloatingInput
-              label="Search by cactus id"
+              label={t.searchByCactusId}
               value={searchId}
               onChange={(e) => setSearchId(e.target.value)}
             />
@@ -1503,21 +2528,28 @@ export default function AdminPage() {
                 variant={statusView === "all" ? "default" : "outline"}
                 onClick={() => setStatusView("all")}
               >
-                ต้นไม้ทั้งหมด ({statusRows.all.length})
+                {t.all} ({statusRows.all.length})
+              </Button>
+              <Button
+                type="button"
+                variant={statusView === "available" ? "default" : "outline"}
+                onClick={() => setStatusView("available")}
+              >
+                {t.available} ({statusRows.available.length})
               </Button>
               <Button
                 type="button"
                 variant={statusView === "reserved" ? "default" : "outline"}
                 onClick={() => setStatusView("reserved")}
               >
-                ที่จองแล้ว ({statusRows.reserved.length})
+                {t.reserved} ({statusRows.reserved.length})
               </Button>
               <Button
                 type="button"
                 variant={statusView === "sold" ? "default" : "outline"}
                 onClick={() => setStatusView("sold")}
               >
-                ที่ขายแล้ว ({statusRows.sold.length})
+                {t.sold} ({statusRows.sold.length})
               </Button>
             </div>
 
@@ -1535,18 +2567,75 @@ export default function AdminPage() {
                       status: {statusLabel(row)}
                     </p>
                   </div>
-                  <Button
-                    type="button"
-                    variant={row.isSold ? "outline" : "default"}
-                    onClick={() => toggleSold(row.id, !row.isSold)}
-                  >
-                    {row.isSold ? "Set available" : "Set sold"}
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button type="button" variant="outline" size="sm">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => changeStatus(row.id, "available")}
+                      >
+                        {t.available}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => changeStatus(row.id, "reserved")}
+                      >
+                        {t.reserved}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => changeStatus(row.id, "sold")}
+                      >
+                        {t.sold}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               ))}
             </div>
           </div>
         )}
+
+        <Dialog
+          open={deleteDialog.open}
+          onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {adminLang === "th" ? "ยืนยันการลบ" : "Confirm Delete"}
+              </DialogTitle>
+              <DialogDescription>
+                {adminLang === "th"
+                  ? `คุณต้องการลบ "${deleteDialog.name}" จริงหรือไม่?`
+                  : `Are you sure you want to delete "${deleteDialog.name}"?`}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() =>
+                  setDeleteDialog({
+                    open: false,
+                    kind: null,
+                    id: null,
+                    name: "",
+                  })
+                }
+              >
+                {adminLang === "th" ? "ยกเลิก" : "Cancel"}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={executeDelete}
+                disabled={busy}
+              >
+                {adminLang === "th" ? "ลบ" : "Delete"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </main>
   );
