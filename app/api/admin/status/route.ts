@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/firebase-server";
-import { badRequest, requireAdmin } from "@/lib/api-helpers";
+import { badRequest, requireAdmin, revalidatePublicContent } from "@/lib/api-helpers";
 
 export async function PATCH(req: NextRequest) {
   const unauthorized = await requireAdmin();
@@ -35,6 +35,9 @@ export async function PATCH(req: NextRequest) {
     await docRef.update(updateData);
     const updatedDoc = await docRef.get();
     const updatedData = updatedDoc.data();
+
+    // Revalidate public pages when status changes
+    await revalidatePublicContent();
 
     return NextResponse.json({ ok: true, item: updatedData });
   } catch (error) {

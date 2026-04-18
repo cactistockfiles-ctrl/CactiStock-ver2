@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCacti, saveCacti } from "@/lib/content-store";
-import { badRequest, requireAdmin } from "@/lib/api-helpers";
+import { badRequest, requireAdmin, revalidatePublicContent } from "@/lib/api-helpers";
 import { CactusItem } from "@/types/content";
 
 export async function GET() {
@@ -26,6 +26,10 @@ export async function POST(req: NextRequest) {
 
   rows.push({ ...payload, createdAt: payload.createdAt || new Date().toISOString() });
   await saveCacti(rows);
+  
+  // Revalidate public pages when cacti change
+  await revalidatePublicContent();
+  
   return NextResponse.json({ ok: true });
 }
 
@@ -46,6 +50,10 @@ export async function PUT(req: NextRequest) {
 
   rows[idx] = { ...payload, createdAt: rows[idx].createdAt };
   await saveCacti(rows);
+  
+  // Revalidate public pages when cacti change
+  await revalidatePublicContent();
+  
   return NextResponse.json({ ok: true });
 }
 
@@ -61,5 +69,9 @@ export async function DELETE(req: NextRequest) {
   const rows = await getCacti();
   const nextRows = rows.filter((x) => x.id !== id);
   await saveCacti(nextRows);
+  
+  // Revalidate public pages when cacti change
+  await revalidatePublicContent();
+  
   return NextResponse.json({ ok: true });
 }

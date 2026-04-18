@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getHeroes, saveHeroes } from "@/lib/content-store";
-import { badRequest, requireAdmin } from "@/lib/api-helpers";
+import { badRequest, requireAdmin, revalidatePublicContent } from "@/lib/api-helpers";
 import { HeroItem } from "@/types/content";
 
 export async function GET() {
@@ -26,6 +26,10 @@ export async function POST(req: NextRequest) {
 
   rows.push(payload);
   await saveHeroes(rows);
+  
+  // Revalidate public pages when heroes change
+  await revalidatePublicContent();
+  
   return NextResponse.json({ ok: true });
 }
 
@@ -46,6 +50,10 @@ export async function PUT(req: NextRequest) {
 
   rows[idx] = payload;
   await saveHeroes(rows);
+  
+  // Revalidate public pages when heroes change
+  await revalidatePublicContent();
+  
   return NextResponse.json({ ok: true });
 }
 
@@ -61,5 +69,9 @@ export async function DELETE(req: NextRequest) {
   const rows = await getHeroes();
   const nextRows = rows.filter((x) => x.id !== id);
   await saveHeroes(nextRows);
+  
+  // Revalidate public pages when heroes change
+  await revalidatePublicContent();
+  
   return NextResponse.json({ ok: true });
 }

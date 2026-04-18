@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { writeFile, readFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
+import { requireAdmin, revalidatePublicContent } from "@/lib/api-helpers";
 
 const DATA_FILE = path.join(process.cwd(), "data", "about.json");
 
@@ -96,6 +97,9 @@ export async function GET() {
 }
 
 export async function PUT(request: NextRequest) {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
     const data = await request.json();
 
@@ -106,6 +110,10 @@ export async function PUT(request: NextRequest) {
     }
 
     await writeFile(DATA_FILE, JSON.stringify(data, null, 2), "utf-8");
+    
+    // Revalidate public pages when about data changes
+    await revalidatePublicContent();
+    
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error saving about data:", error);

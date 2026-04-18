@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getNews, saveNews } from "@/lib/content-store";
-import { badRequest, requireAdmin } from "@/lib/api-helpers";
+import { badRequest, requireAdmin, revalidatePublicContent } from "@/lib/api-helpers";
 import { NewsItem } from "@/types/content";
 
 export async function GET() {
@@ -30,6 +30,10 @@ export async function POST(req: NextRequest) {
 
   rows.push({ ...payload, createdAt: payload.createdAt || new Date().toISOString() });
   await saveNews(rows);
+  
+  // Revalidate public pages when news change
+  await revalidatePublicContent();
+  
   return NextResponse.json({ ok: true });
 }
 
@@ -54,6 +58,10 @@ export async function PUT(req: NextRequest) {
 
   rows[idx] = { ...payload, createdAt: rows[idx].createdAt };
   await saveNews(rows);
+  
+  // Revalidate public pages when news change
+  await revalidatePublicContent();
+  
   return NextResponse.json({ ok: true });
 }
 
@@ -69,5 +77,9 @@ export async function DELETE(req: NextRequest) {
   const rows = await getNews();
   const nextRows = rows.filter((x) => x.id !== id);
   await saveNews(nextRows);
+  
+  // Revalidate public pages when news change
+  await revalidatePublicContent();
+  
   return NextResponse.json({ ok: true });
 }
