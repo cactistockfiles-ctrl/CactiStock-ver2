@@ -46,8 +46,10 @@ const Navbar = () => {
             <Link
               key={link.to}
               href={link.to}
-              className={`text-sm font-medium transition-colors hover:text-primary ${
-                pathname === link.to ? "text-primary" : "text-muted-foreground"
+              className={`text-sm transition-colors hover:text-primary ${
+                pathname === link.to
+                  ? "font-bold text-primary"
+                  : "font-medium text-muted-foreground"
               }`}
             >
               {link.label}
@@ -97,10 +99,10 @@ const Navbar = () => {
                 key={link.to}
                 href={link.to}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`text-sm font-medium transition-colors hover:text-primary ${
+                className={`text-sm transition-colors hover:text-primary ${
                   pathname === link.to
-                    ? "text-primary"
-                    : "text-muted-foreground"
+                    ? "font-bold text-primary"
+                    : "font-medium text-muted-foreground"
                 }`}
               >
                 {link.label}

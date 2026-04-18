@@ -1,11 +1,42 @@
 "use client";
 
 import Link from "next/link";
-import { Instagram, Facebook, Twitter } from "lucide-react";
+import { Instagram, Facebook, Youtube, MessageCircle } from "lucide-react";
 import { useLocale } from "@/context/LocaleContext";
+import { useState, useEffect } from "react";
+
+interface AboutData {
+  facebook?: string;
+  showFacebook?: boolean;
+  instagram?: string;
+  showInstagram?: boolean;
+  tiktok?: string;
+  showTiktok?: boolean;
+  youtube?: string;
+  showYoutube?: boolean;
+  contactLine?: string;
+  showLine?: boolean;
+  contactEmail?: string;
+}
 
 const Footer = () => {
   const { locale, t } = useLocale();
+  const [aboutData, setAboutData] = useState<AboutData | null>(null);
+
+  useEffect(() => {
+    async function fetchAboutData() {
+      try {
+        const res = await fetch("/api/about");
+        if (res.ok) {
+          const data = await res.json();
+          setAboutData(data);
+        }
+      } catch (error) {
+        console.error("Error fetching about data:", error);
+      }
+    }
+    fetchAboutData();
+  }, []);
 
   return (
     <footer className="bg-cactus-900 text-cactus-50">
@@ -55,38 +86,58 @@ const Footer = () => {
               {t("footer.contact")}
             </h4>
             <ul className="space-y-2 text-sm text-cactus-200">
-              <li>Email: cactistockfiles@gmail.com</li>
-              <li>LINE: cactistockfiles</li>
+              <li>
+                Email: {aboutData?.contactEmail || "cactistockfiles@gmail.com"}
+              </li>
+              {aboutData?.showLine && aboutData.contactLine && (
+                <li>LINE: {aboutData.contactLine}</li>
+              )}
             </ul>
           </div>
 
           <div className="space-y-4">
             <h4 className="font-display text-lg font-semibold">Follow Us</h4>
             <div className="flex gap-4">
-              <a
-                href="https://instagram.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-cactus-200 hover:text-cactus-50 transition-colors"
-              >
-                <Instagram className="h-5 w-5" />
-              </a>
-              <a
-                href="https://facebook.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-cactus-200 hover:text-cactus-50 transition-colors"
-              >
-                <Facebook className="h-5 w-5" />
-              </a>
-              <a
-                href="https://twitter.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-cactus-200 hover:text-cactus-50 transition-colors"
-              >
-                <Twitter className="h-5 w-5" />
-              </a>
+              {aboutData?.showInstagram && aboutData.instagram && (
+                <a
+                  href={aboutData.instagram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-cactus-200 hover:text-cactus-50 transition-colors"
+                >
+                  <Instagram className="h-5 w-5" />
+                </a>
+              )}
+              {aboutData?.showFacebook && aboutData.facebook && (
+                <a
+                  href={aboutData.facebook}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-cactus-200 hover:text-cactus-50 transition-colors"
+                >
+                  <Facebook className="h-5 w-5" />
+                </a>
+              )}
+              {aboutData?.showYoutube && aboutData.youtube && (
+                <a
+                  href={aboutData.youtube}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-cactus-200 hover:text-cactus-50 transition-colors"
+                >
+                  <Youtube className="h-5 w-5" />
+                </a>
+              )}
+              {aboutData?.showTiktok && aboutData.tiktok && (
+                <a
+                  href={aboutData.tiktok}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-cactus-200 hover:text-cactus-50 transition-colors"
+                >
+                  <MessageCircle className="h-5 w-5" />
+                </a>
+              )}
             </div>
           </div>
         </div>

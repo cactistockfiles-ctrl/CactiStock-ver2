@@ -1,6 +1,6 @@
 import { Locale } from "@/types/content";
 
-export const LOCALES: Locale[] = ["th", "en", "zh", "id"];
+export const LOCALES: Locale[] = ["en", "th", "zh", "id"];
 
 export const localeLabels: Record<Locale, string> = {
   th: "ไทย",
