@@ -211,9 +211,84 @@ function FloatingTextarea({
   );
 }
 
+async function convertToJpeg(file: File): Promise<File> {
+  // If already a standard web format, check if it needs conversion
+  const needsConversion =
+    file.type === "image/heic" ||
+    file.type === "image/heif" ||
+    file.type === "image/avif" ||
+    file.type === "image/bmp" ||
+    file.type === "image/tiff" ||
+    !file.type.startsWith("image/");
+
+  // For HEIC/HEIF/AVIF etc., convert via canvas
+  // Also convert very large images to reduce size
+  if (
+    !needsConversion &&
+    file.size <= 5 * 1024 * 1024 &&
+    file.type === "image/jpeg"
+  ) {
+    return file; // Already JPEG and reasonable size
+  }
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+
+      // Cap dimensions to reduce file size (max 2000px on longest side)
+      const MAX_DIM = 2000;
+      let w = img.width;
+      let h = img.height;
+      if (w > MAX_DIM || h > MAX_DIM) {
+        if (w > h) {
+          h = Math.round((h * MAX_DIM) / w);
+          w = MAX_DIM;
+        } else {
+          w = Math.round((w * MAX_DIM) / h);
+          h = MAX_DIM;
+        }
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0, w, h);
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            resolve(file); // Fallback to original
+            return;
+          }
+          const jpegFile = new File(
+            [blob],
+            file.name.replace(/\.[^.]+$/, ".jpg"),
+            {
+              type: "image/jpeg",
+              lastModified: Date.now(),
+            },
+          );
+          resolve(jpegFile);
+        },
+        "image/jpeg",
+        0.9, // 90% quality
+      );
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(file); // Fallback to original
+    };
+    img.src = url;
+  });
+}
+
 async function uploadImage(file: File, folder: string) {
+  const jpegFile = await convertToJpeg(file);
   const fd = new FormData();
-  fd.append("file", file);
+  fd.append("file", jpegFile);
   fd.append("folder", folder);
 
   const res = await fetch("/api/admin/upload-image", {

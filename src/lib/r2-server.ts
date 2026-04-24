@@ -69,6 +69,10 @@ function detectMimeFromBuffer(buffer: Buffer): string {
   if (buffer[0] === 0x42 && buffer[1] === 0x4d) {
     return "image/bmp";
   }
+  // HEIC/HEIF: starts with ftyp box (offset 4: 66 74 79 70)
+  if (buffer.length >= 12 && buffer[4] === 0x66 && buffer[5] === 0x74 && buffer[6] === 0x79 && buffer[7] === 0x70) {
+    return "image/heic";
+  }
 
   return "image/jpeg";
 }
