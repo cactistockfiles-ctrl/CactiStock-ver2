@@ -16,6 +16,13 @@ import { useLocale } from "@/context/LocaleContext";
 import { useCurrency } from "@/hooks/useCurrency";
 import ImageZoomModal from "./ImageZoomModal";
 
+const PLACEHOLDER_IMG =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' fill='%23e5e7eb'%3E%3Crect width='400' height='400'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='18' fill='%239ca3af'%3ENo Image%3C/text%3E%3C/svg%3E";
+
+function imgSrc(url: string) {
+  return url && url.startsWith("http") ? url : PLACEHOLDER_IMG;
+}
+
 interface Props {
   cactus: CactusItem | null;
   open: boolean;
@@ -56,7 +63,7 @@ const CactusDetailModal = ({ cactus, open, onOpenChange }: Props) => {
                 onClick={() => setZoomImage(displayImage)}
               >
                 <img
-                  src={displayImage}
+                  src={imgSrc(displayImage)}
                   alt={cactus.name}
                   className="h-full w-full object-cover"
                 />
@@ -76,7 +83,7 @@ const CactusDetailModal = ({ cactus, open, onOpenChange }: Props) => {
                     }`}
                   >
                     <img
-                      src={img}
+                      src={imgSrc(img)}
                       alt={`${cactus.name} ${t("common.angle")} ${i + 1}`}
                       className="h-full w-full object-cover"
                     />
@@ -128,7 +135,7 @@ const CactusDetailModal = ({ cactus, open, onOpenChange }: Props) => {
       </Dialog>
 
       <ImageZoomModal
-        src={zoomImage || ""}
+        src={imgSrc(zoomImage || "")}
         alt={cactus.name}
         open={!!zoomImage}
         onOpenChange={(open) => !open && setZoomImage(null)}

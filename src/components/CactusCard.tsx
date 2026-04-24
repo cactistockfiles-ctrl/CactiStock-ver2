@@ -14,6 +14,13 @@ interface Props {
   onSelect: (cactus: CactusItem) => void;
 }
 
+const PLACEHOLDER_IMG =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' fill='%23e5e7eb'%3E%3Crect width='400' height='400'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='18' fill='%239ca3af'%3ENo Image%3C/text%3E%3C/svg%3E";
+
+function imgSrc(url: string) {
+  return url && url.startsWith("http") ? url : PLACEHOLDER_IMG;
+}
+
 const CactusCard = ({ cactus, onSelect }: Props) => {
   const { addToCart, items } = useCart();
   const { t } = useLocale();
@@ -36,7 +43,7 @@ const CactusCard = ({ cactus, onSelect }: Props) => {
       <div className="flex h-64">
         <div className="w-2/3 overflow-hidden">
           <img
-            src={cactus.images.top}
+            src={imgSrc(cactus.images.top)}
             alt={cactus.name}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
@@ -49,8 +56,8 @@ const CactusCard = ({ cactus, onSelect }: Props) => {
                 className="h-1/3 overflow-hidden border-l border-b last:border-b-0"
               >
                 <img
-                  src={img}
-                  alt={`${cactus.name} side ${i + 1}`}
+                  src={imgSrc(img)}
+                  alt={`${cactus.name} ${t("common.angle")} ${i + 1}`}
                   className="h-full w-full object-cover"
                 />
               </div>

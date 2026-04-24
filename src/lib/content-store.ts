@@ -69,7 +69,17 @@ async function writeCollection<T extends { id: string }>(
 
 export async function getCacti(): Promise<CactusItem[]> {
   const rows = await readCollection<CactusItem>(COLLECTIONS.cacti, seedCacti);
-  return rows.toSorted((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  return rows
+    .map((row) => ({
+      ...row,
+      images: {
+        top: row.images?.top ?? "",
+        side1: row.images?.side1 ?? "",
+        side2: row.images?.side2 ?? "",
+        side3: row.images?.side3 ?? "",
+      },
+    }))
+    .toSorted((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 }
 
 export async function saveCacti(rows: CactusItem[]) {
