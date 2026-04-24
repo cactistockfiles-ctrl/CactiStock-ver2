@@ -346,7 +346,7 @@ const adminTranslations = {
     family: "วงศ์",
     sizeCm: "ขนาด (ซม.)",
     price: "ราคา",
-    growType: "วิธีการเจริญเติบ",
+    growType: "วิธีการปลูก",
     seed: "เมล็ด",
     graft: "กราฟ",
     description: "คำอธิบาย",
@@ -408,7 +408,7 @@ const adminTranslations = {
     family: "Family",
     sizeCm: "Size (cm)",
     price: "Price",
-    growType: "Grow Type",
+    growType: "Planting Method",
     seed: "Seed",
     graft: "Graft",
     description: "Description",
@@ -1062,10 +1062,11 @@ export default function AdminPage() {
               </div>
 
               <div className="space-y-2">
-                <FieldLabel
-                  text="2. family name"
-                  invalid={cactusRequiredErrors.family}
-                />
+                <label
+                  className={`text-sm font-medium ${cactusRequiredErrors.family ? "text-destructive" : ""}`}
+                >
+                  2. family name
+                </label>
                 <select
                   className="w-full rounded-md border bg-background px-3 py-2 text-sm"
                   value={familySelectValue}
