@@ -527,6 +527,9 @@ export default function AdminPage() {
   const [imagePreviews, setImagePreviews] = useState<Record<string, string>>(
     {},
   );
+  const [imageUploadStatus, setImageUploadStatus] = useState<
+    Record<string, "idle" | "uploading" | "done" | "error">
+  >({});
   const [busy, setBusy] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -681,6 +684,7 @@ export default function AdminPage() {
       });
       setCactusForm(emptyCactus);
       setImagePreviews({});
+      setImageUploadStatus({});
       await loadData();
     } finally {
       setBusy(false);
@@ -1259,29 +1263,50 @@ export default function AdminPage() {
                       <Input
                         type="file"
                         accept="image/*"
+                        disabled={imageUploadStatus[key] === "uploading"}
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (!file) return;
 
-                          // Create preview
-                          const reader = new FileReader();
-                          reader.onload = (event) => {
-                            setImagePreviews((prev) => ({
-                              ...prev,
-                              [key]: event.target?.result as string,
-                            }));
-                          };
-                          reader.readAsDataURL(file);
-
-                          // Upload image
-                          const url = await uploadImage(
-                            file,
-                            "cactistock/cacti",
-                          );
-                          setCactusForm((prev) => ({
+                          setImageUploadStatus((prev) => ({
                             ...prev,
-                            images: { ...prev.images, [key]: url },
+                            [key]: "uploading",
                           }));
+
+                          try {
+                            // Create preview
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              setImagePreviews((prev) => ({
+                                ...prev,
+                                [key]: event.target?.result as string,
+                              }));
+                            };
+                            reader.readAsDataURL(file);
+
+                            // Upload image
+                            const url = await uploadImage(
+                              file,
+                              "cactistock/cacti",
+                            );
+                            setCactusForm((prev) => ({
+                              ...prev,
+                              images: { ...prev.images, [key]: url },
+                            }));
+                            setImageUploadStatus((prev) => ({
+                              ...prev,
+                              [key]: "done",
+                            }));
+                          } catch (error) {
+                            console.error(`Upload failed for ${key}:`, error);
+                            setImageUploadStatus((prev) => ({
+                              ...prev,
+                              [key]: "error",
+                            }));
+                            alert(
+                              `Upload failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+                            );
+                          }
                         }}
                       />
                       {(imagePreviews[key] || cactusForm.images[key]) && (
@@ -1290,6 +1315,19 @@ export default function AdminPage() {
                           alt={label}
                           className="w-full h-auto rounded-md border object-contain max-h-48"
                         />
+                      )}
+                      {imageUploadStatus[key] === "uploading" && (
+                        <div className="text-xs text-muted-foreground">
+                          Uploading...
+                        </div>
+                      )}
+                      {imageUploadStatus[key] === "done" && (
+                        <div className="text-xs text-green-600">✓ Uploaded</div>
+                      )}
+                      {imageUploadStatus[key] === "error" && (
+                        <div className="text-xs text-destructive">
+                          ✗ Upload failed - try again
+                        </div>
                       )}
                     </div>
                   ))}
@@ -1349,7 +1387,10 @@ export default function AdminPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
-                              onClick={() => setCactusForm(row)}
+                              onClick={() => {
+                                setCactusForm(row);
+                                setImageUploadStatus({});
+                              }}
                             >
                               {t.edit}
                             </DropdownMenuItem>
