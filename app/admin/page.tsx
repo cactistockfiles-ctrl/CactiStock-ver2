@@ -25,6 +25,11 @@ import { cn } from "@/lib/utils";
 import { translateText } from "@/lib/translation";
 import { t as tI18n, LOCALES } from "@/lib/i18n";
 import type { Locale } from "@/types/content";
+import {
+  CACTUS_TAXONOMY,
+  getFamilyNames,
+  getSpeciesNames,
+} from "@/data/cactus-taxonomy";
 
 const emptyCactus: CactusItem = {
   id: "",
@@ -108,14 +113,7 @@ const emptyNews: NewsItem = {
   createdAt: "",
 };
 
-const cactusFamilyOptions = [
-  "Gymnocalycium",
-  "Astrophytum",
-  "Mammillaria",
-  "Echinocactus",
-  "Opuntia",
-  "Melocactus",
-] as const;
+const cactusFamilyOptions = getFamilyNames();
 
 type CactusRequiredErrors = {
   id: boolean;
@@ -1090,6 +1088,7 @@ export default function AdminPage() {
                     setCactusForm({
                       ...cactusForm,
                       family: value,
+                      name: "",
                     });
                   }}
                 >
@@ -1120,9 +1119,9 @@ export default function AdminPage() {
               </div>
 
               <div className="space-y-2">
-                <FloatingInput
-                  label={`3. ${t.name}`}
-                  invalid={cactusRequiredErrors.name}
+                <label className="text-sm font-medium">3. {t.name}</label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={cactusForm.name}
                   onChange={(e) => {
                     setCactusRequiredErrors((prev) => ({
@@ -1131,8 +1130,22 @@ export default function AdminPage() {
                     }));
                     setCactusForm({ ...cactusForm, name: e.target.value });
                   }}
+                  disabled={!cactusForm.family}
                   required
-                />
+                >
+                  <option value="">Select species...</option>
+                  {cactusForm.family &&
+                    getSpeciesNames(cactusForm.family).map((species) => (
+                      <option key={species} value={species}>
+                        {species}
+                      </option>
+                    ))}
+                </select>
+                {!cactusForm.family && (
+                  <p className="text-xs text-muted-foreground">
+                    Please select a family first
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
