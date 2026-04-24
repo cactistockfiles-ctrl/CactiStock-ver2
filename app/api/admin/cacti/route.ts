@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCacti, saveCacti } from "@/lib/content-store";
 import { badRequest, requireAdmin, revalidatePublicContent } from "@/lib/api-helpers";
 import { CactusItem } from "@/types/content";
+import { deleteImageFromR2 } from "@/lib/r2-server";
 
 export async function GET() {
   const unauthorized = await requireAdmin();
@@ -67,6 +68,27 @@ export async function DELETE(req: NextRequest) {
   }
 
   const rows = await getCacti();
+  const itemToDelete = rows.find((x) => x.id === id);
+  
+  if (!itemToDelete) {
+    return badRequest("Cactus not found");
+  }
+
+  // Delete image files from R2
+  const imageUrls = [
+    itemToDelete.images.top,
+    itemToDelete.images.side1,
+    itemToDelete.images.side2,
+    itemToDelete.images.side3,
+  ].filter(Boolean); // Remove empty strings
+
+  for (const url of imageUrls) {
+    if (url.startsWith("http")) {
+      await deleteImageFromR2(url);
+    }
+  }
+
+  // Delete from Firestore
   const nextRows = rows.filter((x) => x.id !== id);
   await saveCacti(nextRows);
   

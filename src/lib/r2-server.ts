@@ -1,6 +1,6 @@
 import "server-only";
 
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 let client: S3Client | null = null;
 
@@ -134,4 +134,39 @@ export async function uploadImageToR2(
   }
 
   return { url, key };
+}
+
+export async function deleteImageFromR2(url: string): Promise<void> {
+  const r2 = getR2Client();
+  const bucket = process.env.R2_BUCKET_NAME;
+  const publicUrl = process.env.R2_PUBLIC_URL;
+
+  if (!bucket) {
+    throw new Error("R2_BUCKET_NAME is missing");
+  }
+  if (!publicUrl) {
+    throw new Error("R2_PUBLIC_URL is missing");
+  }
+
+  // Extract key from URL
+  const baseUrl = publicUrl.endsWith("/") ? publicUrl.slice(0, -1) : publicUrl;
+  if (!url.startsWith(baseUrl)) {
+    console.warn(`URL does not match R2 public URL, skipping deletion: ${url}`);
+    return;
+  }
+
+  const key = url.slice(baseUrl.length + 1);
+
+  try {
+    await r2.send(
+      new DeleteObjectCommand({
+        Bucket: bucket,
+        Key: key,
+      })
+    );
+    console.log(`Deleted R2 file: ${key}`);
+  } catch (error) {
+    console.error(`Failed to delete R2 file ${key}:`, error);
+    // Don't throw - allow deletion to proceed even if file deletion fails
+  }
 }
