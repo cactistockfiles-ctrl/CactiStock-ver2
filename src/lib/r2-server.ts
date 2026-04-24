@@ -32,11 +32,45 @@ const MIME_MAP: Record<string, string> = {
   webp: "image/webp",
   svg: "image/svg+xml",
   avif: "image/avif",
+  heic: "image/heic",
+  heif: "image/heif",
+  bmp: "image/bmp",
+  tiff: "image/tiff",
 };
 
 function guessMime(fileName: string, fallback?: string): string {
   const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
   return MIME_MAP[ext] ?? fallback ?? "image/jpeg";
+}
+
+// Detect MIME type from file buffer magic bytes (more reliable)
+function detectMimeFromBuffer(buffer: Buffer): string {
+  if (buffer.length < 4) return "image/jpeg";
+
+  // JPEG: FF D8 FF
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return "image/jpeg";
+  }
+  // PNG: 89 50 4E 47
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) {
+    return "image/png";
+  }
+  // WebP: 52 49 46 46 ... 57 45 42 50
+  if (buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46) {
+    if (buffer.length >= 12 && buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) {
+      return "image/webp";
+    }
+  }
+  // GIF: 47 49 46
+  if (buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46) {
+    return "image/gif";
+  }
+  // BMP: 42 4D
+  if (buffer[0] === 0x42 && buffer[1] === 0x4d) {
+    return "image/bmp";
+  }
+
+  return "image/jpeg";
 }
 
 export async function uploadImageToR2(
@@ -57,18 +91,43 @@ export async function uploadImageToR2(
   }
 
   const key = `${folder}/${fileName}`;
-  const mime = contentType ?? guessMime(fileName);
+  
+  // Determine MIME type with fallback strategy:
+  // 1. Use provided contentType if available
+  // 2. Detect from file buffer magic bytes
+  // 3. Guess from filename extension
+  let mime = contentType;
+  if (!mime || mime === "application/octet-stream") {
+    mime = detectMimeFromBuffer(fileBuffer);
+  }
+  if (!mime || mime === "application/octet-stream") {
+    mime = guessMime(fileName);
+  }
 
-  await r2.send(
-    new PutObjectCommand({
-      Bucket: bucket,
-      Key: key,
-      Body: fileBuffer,
-      ContentType: mime,
-    }),
-  );
+  try {
+    await r2.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        Body: fileBuffer,
+        ContentType: mime,
+        CacheControl: "public, max-age=31536000", // Cache for 1 year since files are immutable
+      }),
+    );
+  } catch (error) {
+    throw new Error(
+      `Failed to upload to R2: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
+  }
 
-  const url = `${publicUrl.replace(/\/$/, "")}/${key}`;
+  // Construct public URL ensuring it's properly formatted
+  const baseUrl = publicUrl.endsWith("/") ? publicUrl.slice(0, -1) : publicUrl;
+  const url = `${baseUrl}/${key}`;
+
+  // Verify URL is valid
+  if (!url.startsWith("http")) {
+    throw new Error(`Invalid generated URL: ${url}`);
+  }
 
   return { url, key };
 }

@@ -521,6 +521,29 @@ export default function AdminPage() {
       : "__other__";
   }, [cactusForm.family]);
 
+  async function autoRepairImages() {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/admin/fix-images", {
+        method: "POST",
+      });
+      const result = await res.json();
+
+      if (result.ok && result.fixed > 0) {
+        alert(`✅ ซ่อมแซมเสร็จ! ${result.fixed} รายการได้รับการแก้ไข`);
+        await loadData();
+      } else {
+        alert("❌ ไม่พบรูปภาพที่ต้องแก้ไข หรือเกิดข้อผิดพลาด");
+      }
+    } catch (err) {
+      alert(
+        `❌ เกิดข้อผิดพลาด: ${err instanceof Error ? err.message : "Unknown error"}`,
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function logout() {
     await fetch("/api/admin/logout", { method: "POST" });
     router.push("/admin/login");
@@ -945,6 +968,21 @@ export default function AdminPage() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={autoRepairImages}
+              disabled={busy}
+            >
+              {busy ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ซ่อมแซม...
+                </>
+              ) : (
+                "🔧 ซ่อมแซมรูป"
+              )}
+            </Button>
             <Button variant="outline" onClick={logout}>
               {t.logout}
             </Button>

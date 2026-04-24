@@ -63,13 +63,10 @@ const CactusCard = ({ cactus, onSelect }: Props) => {
         <span className="text-xs text-muted-foreground font-mono">
           {cactus.id}
         </span>
-        <h3 className="font-display text-lg font-semibold leading-tight text-card-foreground">
-          {cactus.name}
-        </h3>
+        <h1 className="font-display text-lg font-semibold leading-tight text-card-foreground">
+          {cactus.family} {cactus.name}
+        </h1>
         <div className="flex flex-wrap gap-1.5">
-          <Badge variant="secondary" className="text-xs">
-            {cactus.family}
-          </Badge>
           <Badge variant="outline" className="text-xs">
             {growTypeLabel}
           </Badge>
