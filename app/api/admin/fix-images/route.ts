@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
 
     // Fix broken items by matching with R2 files
     let fixed = 0;
-    const fixedItems = [];
+    const fixedItems: Array<{ id: string; name: string; images: { top: string; side1: string; side2: string; side3: string; }; matched?: number }> = [];
 
     for (const item of cacti) {
       // Check if item has broken images
