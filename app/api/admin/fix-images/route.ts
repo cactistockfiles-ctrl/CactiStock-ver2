@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     const baseUrl = publicUrl.endsWith("/") ? publicUrl.slice(0, -1) : publicUrl;
 
     // Find all files in R2
-    const r2Files: Record<string, string[]> = {};
+    const r2FileUrls: string[] = [];
     const prefix = "cactistock/cacti/";
 
     const response = await r2.send(
@@ -49,46 +49,41 @@ export async function POST(req: NextRequest) {
     if (response.Contents) {
       for (const file of response.Contents) {
         if (!file.Key) continue;
-        const fileName = file.Key.split("/").pop();
-        if (!fileName) continue;
-
-        // Extract timestamp and name from file
-        const timestampMatch = fileName.match(/^(\d+)-(.+)$/);
-        if (timestampMatch) {
-          const [, timestamp, nameWithExt] = timestampMatch;
-          const fileUrl = `${baseUrl}/${file.Key}`;
-          
-          // Store by timestamp for matching
-          if (!r2Files[timestamp]) {
-            r2Files[timestamp] = [];
-          }
-          r2Files[timestamp].push(fileUrl);
-        }
+        const fileUrl = `${baseUrl}/${file.Key}`;
+        r2FileUrls.push(fileUrl);
       }
     }
+
+    console.log(`Found ${r2FileUrls.length} files in R2`);
+    console.log(`Checking ${cacti.length} cactus items`);
 
     // Fix broken items by matching with R2 files
     let fixed = 0;
     const fixedItems: Array<{ id: string; name: string; images: { top: string; side1: string; side2: string; side3: string; }; matched?: number }> = [];
 
     for (const item of cacti) {
-      // Check if item has broken images
+      // Check if item has broken images (empty or not starting with http)
       const hasBroken = 
-        !item.images.top?.startsWith("http") ||
-        !item.images.side1?.startsWith("http") ||
-        !item.images.side2?.startsWith("http") ||
-        !item.images.side3?.startsWith("http");
+        !item.images.top || !item.images.top.startsWith("http") ||
+        !item.images.side1 || !item.images.side1.startsWith("http") ||
+        !item.images.side2 || !item.images.side2.startsWith("http") ||
+        !item.images.side3 || !item.images.side3.startsWith("http");
 
       if (!hasBroken) continue;
 
-      // Find matching files for this item
-      const itemFiles = Object.entries(r2Files)
-        .flatMap(([_, urls]) => urls)
-        .filter(url => url.includes(item.id) || url.includes(item.name.replace(/\s+/g, "-")))
-        .sort();
+      console.log(`Checking item ${item.id} (${item.name}) - has broken images`);
+
+      // Find matching files for this item by ID or name
+      const itemFiles = r2FileUrls.filter(url => 
+        url.includes(item.id) || 
+        url.includes(item.name.replace(/\s+/g, "-").toLowerCase()) ||
+        url.includes(item.name.toLowerCase())
+      );
+
+      console.log(`Found ${itemFiles.length} matching files for ${item.id}`);
 
       if (itemFiles.length >= 4) {
-        // Found all 4 images
+        // Found all 4 images - assign in order
         item.images = {
           top: itemFiles[0],
           side1: itemFiles[1],
@@ -101,15 +96,22 @@ export async function POST(req: NextRequest) {
           name: item.name,
           images: item.images,
         });
+        console.log(`Fixed all 4 images for ${item.id}`);
       } else if (itemFiles.length > 0) {
         // Partial match - fill what we have
         const urls = itemFiles;
-        item.images = {
-          top: urls[0] || item.images.top,
-          side1: urls[1] || item.images.side1,
-          side2: urls[2] || item.images.side2,
-          side3: urls[3] || item.images.side3,
-        };
+        if (!item.images.top || !item.images.top.startsWith("http")) {
+          item.images.top = urls[0] || item.images.top;
+        }
+        if (!item.images.side1 || !item.images.side1.startsWith("http")) {
+          item.images.side1 = urls[1] || item.images.side1;
+        }
+        if (!item.images.side2 || !item.images.side2.startsWith("http")) {
+          item.images.side2 = urls[2] || item.images.side2;
+        }
+        if (!item.images.side3 || !item.images.side3.startsWith("http")) {
+          item.images.side3 = urls[3] || item.images.side3;
+        }
         fixed++;
         fixedItems.push({
           id: item.id,
@@ -117,11 +119,13 @@ export async function POST(req: NextRequest) {
           matched: itemFiles.length,
           images: item.images,
         });
+        console.log(`Fixed ${itemFiles.length} images for ${item.id}`);
       }
     }
 
     if (fixed > 0) {
       await saveCacti(cacti);
+      console.log(`Successfully fixed ${fixed} items`);
       return NextResponse.json({
         ok: true,
         fixed,
@@ -129,6 +133,7 @@ export async function POST(req: NextRequest) {
         message: `Successfully fixed ${fixed} items`,
       });
     } else {
+      console.log("No broken items found or unable to match files");
       return NextResponse.json({
         ok: false,
         fixed: 0,
