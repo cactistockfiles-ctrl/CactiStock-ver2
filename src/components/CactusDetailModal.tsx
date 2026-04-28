@@ -14,6 +14,8 @@ import { CactusItem } from "@/types/content";
 import { useCart } from "@/context/CartContext";
 import { useLocale } from "@/context/LocaleContext";
 import { useCurrency } from "@/hooks/useCurrency";
+import { useUser } from "@/context/UserContext";
+import AuthModal from "@/components/AuthModal";
 import ImageZoomModal from "./ImageZoomModal";
 
 const PLACEHOLDER_IMG =
@@ -31,10 +33,12 @@ interface Props {
 
 const CactusDetailModal = ({ cactus, open, onOpenChange }: Props) => {
   const { addToCart } = useCart();
+  const { user } = useUser();
   const { t } = useLocale();
   const { formatted: priceFormatted } = useCurrency(cactus?.price || 0);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string>("");
+  const [authOpen, setAuthOpen] = useState(false);
 
   if (!cactus) return null;
 
@@ -118,6 +122,10 @@ const CactusDetailModal = ({ cactus, open, onOpenChange }: Props) => {
                 <Button
                   disabled={cactus.isSold}
                   onClick={() => {
+                    if (!user) {
+                      setAuthOpen(true);
+                      return;
+                    }
                     addToCart(cactus);
                     onOpenChange(false);
                   }}
@@ -128,6 +136,11 @@ const CactusDetailModal = ({ cactus, open, onOpenChange }: Props) => {
                     ? t("catalogue.sold")
                     : t("common.addToCartLong")}
                 </Button>
+                <AuthModal
+                  open={authOpen}
+                  onOpenChange={setAuthOpen}
+                  initialMode="login"
+                />
               </div>
             </div>
           </div>
