@@ -7,6 +7,8 @@ import { CactusItem } from "@/types/content";
 import { useCart } from "@/context/CartContext";
 import { useLocale } from "@/context/LocaleContext";
 import { useCurrency } from "@/hooks/useCurrency";
+import { useUser } from "@/context/UserContext";
+import AuthModal from "@/components/AuthModal";
 import { useState } from "react";
 
 interface Props {
@@ -23,9 +25,11 @@ function imgSrc(url: string) {
 
 const CactusCard = ({ cactus, onSelect }: Props) => {
   const { addToCart, items } = useCart();
+  const { user } = useUser();
   const { t } = useLocale();
   const { formatted: priceFormatted } = useCurrency(cactus.price);
   const [addedToCart, setAddedToCart] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
 
   const growTypeLabel =
     cactus.growType === "seed" ? t("common.seed") : t("common.graft");
@@ -109,6 +113,10 @@ const CactusCard = ({ cactus, onSelect }: Props) => {
             variant={isInCart ? "secondary" : "default"}
             onClick={(e) => {
               e.stopPropagation();
+              if (!user) {
+                setAuthOpen(true);
+                return;
+              }
               const wasAdded = addToCart(cactus);
               if (wasAdded) {
                 setAddedToCart(true);
@@ -127,6 +135,11 @@ const CactusCard = ({ cactus, onSelect }: Props) => {
               </>
             )}
           </Button>
+          <AuthModal
+            open={authOpen}
+            onOpenChange={setAuthOpen}
+            initialMode="login"
+          />
         </div>
       </div>
     </div>
