@@ -13,6 +13,9 @@ export interface CactusItem {
   nameTranslations: Translations;
   family: string;
   sizeCm: number;
+  widthCm?: number;
+  lengthCm?: number;
+  heightCm?: number;
   price: number;
   growType: "seed" | "graft";
   description: string;

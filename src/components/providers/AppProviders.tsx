@@ -5,6 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CartProvider } from "@/context/CartContext";
+import { UserProvider } from "@/context/UserContext";
 import { useState } from "react";
 
 export default function AppProviders({
@@ -29,11 +30,13 @@ export default function AppProviders({
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <CartProvider>
-          <Toaster />
-          <Sonner />
-          {children}
-        </CartProvider>
+        <UserProvider>
+          <CartProvider>
+            <Toaster />
+            <Sonner />
+            {children}
+          </CartProvider>
+        </UserProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

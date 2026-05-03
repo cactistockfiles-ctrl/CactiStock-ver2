@@ -121,6 +121,9 @@ type CactusRequiredErrors = {
   name: boolean;
   growType: boolean;
   sizeCm: boolean;
+  widthCm: boolean;
+  lengthCm: boolean;
+  heightCm: boolean;
   price: boolean;
 };
 
@@ -130,6 +133,9 @@ const emptyCactusRequiredErrors: CactusRequiredErrors = {
   name: false,
   growType: false,
   sizeCm: false,
+  widthCm: false,
+  lengthCm: false,
+  heightCm: false,
   price: false,
 };
 
@@ -628,6 +634,9 @@ export default function AdminPage() {
         cactusForm.growType === "seed" || cactusForm.growType === "graft"
       ),
       sizeCm: !Number.isFinite(cactusForm.sizeCm) || cactusForm.sizeCm <= 0,
+      widthCm: !cactusForm.widthCm || !Number.isFinite(cactusForm.widthCm) || cactusForm.widthCm <= 0,
+      lengthCm: !cactusForm.lengthCm || !Number.isFinite(cactusForm.lengthCm) || cactusForm.lengthCm <= 0,
+      heightCm: !cactusForm.heightCm || !Number.isFinite(cactusForm.heightCm) || cactusForm.heightCm <= 0,
       price: !Number.isFinite(cactusForm.price) || cactusForm.price <= 0,
     };
 
@@ -1191,8 +1200,71 @@ export default function AdminPage() {
               </div>
 
               <div className="space-y-2">
+                {cactusRequiredErrors.widthCm && <span className="text-red-500">***</span>}
                 <FloatingInput
-                  label={`6. ${t.price}`}
+                  label="6. width"
+                  invalid={cactusRequiredErrors.widthCm}
+                  type="number"
+                  min={0}
+                  value={cactusForm.widthCm ?? ""}
+                  onChange={(e) => {
+                    setCactusRequiredErrors((prev) => ({
+                      ...prev,
+                      widthCm: false,
+                    }));
+                    setCactusForm({
+                      ...cactusForm,
+                      widthCm: e.target.value ? Number(e.target.value) : undefined,
+                    });
+                  }}
+                />
+              </div>
+
+              <div className="space-y-2">
+                {cactusRequiredErrors.lengthCm && <span className="text-red-500">***</span>}
+                <FloatingInput
+                  label="7. length"
+                  invalid={cactusRequiredErrors.lengthCm}
+                  type="number"
+                  min={0}
+                  value={cactusForm.lengthCm ?? ""}
+                  onChange={(e) => {
+                    setCactusRequiredErrors((prev) => ({
+                      ...prev,
+                      lengthCm: false,
+                    }));
+                    setCactusForm({
+                      ...cactusForm,
+                      lengthCm: e.target.value ? Number(e.target.value) : undefined,
+                    });
+                  }}
+                />
+              </div>
+
+              <div className="space-y-2">
+                {cactusRequiredErrors.heightCm && <span className="text-red-500">***</span>}
+                <FloatingInput
+                  label="8. height"
+                  invalid={cactusRequiredErrors.heightCm}
+                  type="number"
+                  min={0}
+                  value={cactusForm.heightCm ?? ""}
+                  onChange={(e) => {
+                    setCactusRequiredErrors((prev) => ({
+                      ...prev,
+                      heightCm: false,
+                    }));
+                    setCactusForm({
+                      ...cactusForm,
+                      heightCm: e.target.value ? Number(e.target.value) : undefined,
+                    });
+                  }}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <FloatingInput
+                  label={`9. ${t.price}`}
                   invalid={cactusRequiredErrors.price}
                   type="number"
                   min={0}

@@ -10,12 +10,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCart } from "@/context/CartContext";
 import { useLocale } from "@/context/LocaleContext";
 import { useCurrency } from "@/hooks/useCurrency";
+import { useUser } from "@/context/UserContext";
 
 export default function CartPage() {
   const { locale, t } = useLocale();
   const { items, removeFromCart, updateQuantity, clearCart, totalPrice } =
     useCart();
   const { formatted: totalPriceFormatted } = useCurrency(totalPrice);
+  const { isAuthenticated } = useUser();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -93,6 +95,13 @@ export default function CartPage() {
       <h1 className="mb-8 font-display text-4xl font-bold">
         {t("cart.title")}
       </h1>
+
+      {!isAuthenticated && (
+        <div className="mb-6 rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-left text-sm text-destructive">
+          You must login or register before placing an order. Add items to the
+          cart first, then continue to checkout after signing in.
+        </div>
+      )}
 
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-4">

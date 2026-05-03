@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { ShoppingCart, Menu, X } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useLocale } from "@/context/LocaleContext";
+import { useUser } from "@/context/UserContext";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useState } from "react";
 import logo from "@/assets/logo.png";
@@ -14,6 +15,7 @@ const Navbar = () => {
   const { totalItems } = useCart();
   const pathname = usePathname();
   const { locale, t } = useLocale();
+  const { user, isAuthenticated, logout } = useUser();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const links = [
@@ -70,6 +72,40 @@ const Navbar = () => {
               </span>
             )}
           </Link>
+
+          {isAuthenticated ? (
+            <>
+              <Link
+                href={`/${locale}/profile`}
+                className="hidden md:inline rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+              >
+                {user?.displayName || user?.email}
+              </Link>
+              <button
+                type="button"
+                className="hidden md:inline rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+                onClick={logout}
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                href={`/${locale}/login`}
+                className="hidden md:inline rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+              >
+                Login
+              </Link>
+              <Link
+                href={`/${locale}/register`}
+                className="hidden md:inline rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                Register
+              </Link>
+            </>
+          )}
+
           <div className="hidden md:flex">
             <LanguageSwitcher locale={locale} />
           </div>
@@ -108,8 +144,48 @@ const Navbar = () => {
                 {link.label}
               </Link>
             ))}
-            <div className="flex items-center gap-2 pt-2 border-t">
-              <LanguageSwitcher locale={locale} />
+            <div className="flex flex-col gap-3 pt-4 border-t">
+              {isAuthenticated ? (
+                <>
+                  <Link
+                    href={`/${locale}/profile`}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-sm font-medium text-muted-foreground hover:text-primary"
+                  >
+                    {user?.displayName || user?.email}
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      logout();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="text-left text-sm font-medium text-muted-foreground hover:text-primary"
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href={`/${locale}/login`}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-sm font-medium text-muted-foreground hover:text-primary"
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    href={`/${locale}/register`}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-sm font-medium text-muted-foreground hover:text-primary"
+                  >
+                    Register
+                  </Link>
+                </>
+              )}
+              <div className="flex items-center gap-2">
+                <LanguageSwitcher locale={locale} />
+              </div>
             </div>
           </div>
         </div>
