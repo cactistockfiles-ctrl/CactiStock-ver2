@@ -19,10 +19,10 @@ export interface UserProfile {
   address?: string;
   avatarUrl?: string;
   addresses?: UserAddress[];
+  oauthProvider?: string;
+  oauthId?: string;
 }
 
 export interface UserAccount extends UserProfile {
   passwordHash?: string;
-  oauthProvider?: string;
-  oauthId?: string;
 }
