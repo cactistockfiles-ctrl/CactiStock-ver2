@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getHeroes, saveHeroes } from "@/lib/content-store";
 import { badRequest, requireAdmin, revalidatePublicContent } from "@/lib/api-helpers";
+import { deleteImageUrlsFromR2 } from "@/lib/r2-server";
 import { HeroItem } from "@/types/content";
 
 export async function GET() {
@@ -67,6 +68,13 @@ export async function DELETE(req: NextRequest) {
   }
 
   const rows = await getHeroes();
+  const itemToDelete = rows.find((x) => x.id === id);
+  if (!itemToDelete) {
+    return badRequest("Hero not found");
+  }
+
+  await deleteImageUrlsFromR2([itemToDelete.imageUrl].filter(Boolean));
+
   const nextRows = rows.filter((x) => x.id !== id);
   await saveHeroes(nextRows);
   

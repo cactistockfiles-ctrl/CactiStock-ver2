@@ -133,3 +133,83 @@ export async function getNews(): Promise<NewsItem[]> {
 export async function saveNews(rows: NewsItem[]) {
   await writeCollection(COLLECTIONS.news, rows);
 }
+
+/* ---------- dragon courier rates ---------- */
+
+const DRAGON_COLLECTION = "dragonCourierRates";
+const DRAGON_HISTORY = "dragonCourierRatesHistory";
+
+/**
+ * Retrieve the current published rates document (id: "current").
+ */
+export async function getDragonCourierRates(): Promise<null | { id: string; rates: Record<string, Record<string, number>>; updatedAt: string; updatedBy?: string; note?: string } > {
+  try {
+    const db = getDb();
+    const doc = await db.collection(DRAGON_COLLECTION).doc("current").get();
+    if (!doc.exists) return null;
+    return doc.data() as { id: string; rates: Record<string, Record<string, number>>; updatedAt: string; updatedBy?: string; note?: string };
+  } catch (err) {
+    console.error("getDragonCourierRates error:", err);
+    return null;
+  }
+}
+
+/**
+ * Save/publish new rates and append a history record.
+ */
+export async function saveDragonCourierRates(payload: { rates: Record<string, Record<string, number>>; updatedBy?: string; note?: string }) {
+  const db = getDb();
+  const now = new Date().toISOString();
+
+  const record = {
+    id: "current",
+    rates: payload.rates,
+    updatedAt: now,
+    updatedBy: payload.updatedBy || "admin",
+    note: payload.note || "",
+  };
+
+  await db.collection(DRAGON_COLLECTION).doc("current").set(record);
+
+  // append history
+  const historyItem = {
+    id: `published-${Date.now()}`,
+    rates: payload.rates,
+    publishedAt: now,
+    publishedBy: payload.updatedBy || "admin",
+    note: payload.note || "",
+  };
+  await db.collection(DRAGON_HISTORY).doc(historyItem.id).set(historyItem);
+}
+
+/**
+ * Basic JSON validation for the rates shape.
+ */
+export function validateDragonCourierRatesJson(obj: unknown): { ok: boolean; errors?: string[] } {
+  const zones = ["A","B","C","D","E","F","G","H","I"];
+  const errors: string[] = [];
+
+  if (typeof obj !== "object" || obj === null) {
+    return { ok: false, errors: ["Root must be an object"] };
+  }
+
+  for (const z of zones) {
+    const zoneVal = obj[z];
+    if (zoneVal === undefined) continue; // allow missing zones
+    if (typeof zoneVal !== "object" || zoneVal === null) {
+      errors.push(`Zone ${z} must be an object of weight:price`);
+      continue;
+    }
+    for (const [wK, price] of Object.entries(zoneVal)) {
+      const w = Number(wK);
+      if (!Number.isFinite(w) || w <= 0) {
+        errors.push(`Zone ${z} weight key '${wK}' is not a valid positive number`);
+      }
+      if (!Number.isFinite(Number(price)) || Number(price) < 0) {
+        errors.push(`Zone ${z} weight ${wK} has invalid price '${price}'`);
+      }
+    }
+  }
+
+  return { ok: errors.length === 0, errors: errors.length ? errors : undefined };
+}

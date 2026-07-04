@@ -1,11 +1,13 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { MoreVertical, Languages, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { RefundDialog } from "@/components/admin/RefundDialog";
+import { findOptimalBox, CactusPlant } from "@/lib/packing-algorithm";
 import {
   Dialog,
   DialogContent,
@@ -30,13 +32,13 @@ import {
   getFamilyNames,
   getSpeciesNames,
 } from "@/data/cactus-taxonomy";
-
 const emptyCactus: CactusItem = {
   id: "",
   name: "",
   nameTranslations: {},
   family: "",
   sizeCm: 0,
+  hasSpines: false,
   price: 0,
   growType: "seed",
   description: "",
@@ -438,10 +440,32 @@ const adminTranslations = {
 
 export default function AdminPage() {
   const router = useRouter();
-  const [adminLang, setAdminLang] = useState<"th" | "en">("th");
+  const pathname = usePathname();
   const [tab, setTab] = useState<
-    "heroes" | "catalogue" | "blogs" | "news" | "sold" | "info"
+    "heroes" | "catalogue" | "blogs" | "news" | "orders" | "sold" | "info"
   >("heroes");
+  const [adminLang, setAdminLang] = useState<"th" | "en">("th");
+
+  // Keep tab in sync with URL path (e.g. /admin/heroes)
+  useEffect(() => {
+    if (!pathname) return;
+    const seg = pathname.split("/")[2] || "";
+    const map: Record<string, typeof tab> = {
+      hero: "heroes",
+      heroes: "heroes",
+      catalogue: "catalogue",
+      blog: "blogs",
+      blogs: "blogs",
+      news: "news",
+      orders: "orders",
+      info: "info",
+      sold: "sold",
+    };
+    const newTab = map[seg] ?? "heroes";
+    if (newTab !== tab) {
+      setTab(newTab);
+    }
+  }, [pathname, tab]);
 
   const [deleteDialog, setDeleteDialog] = useState<{
     open: boolean;
@@ -452,11 +476,45 @@ export default function AdminPage() {
 
   const t = adminTranslations[adminLang];
 
+  type OrderRow = {
+    id: string;
+    createdAt: string;
+    contactName: string;
+    contactEmail: string;
+    contactPhone?: string;
+    contactLine?: string;
+    note?: string;
+    paymentStatus?: string;
+    refundStatus?: string;
+    refundAmount?: number;
+    refundReason?: string;
+    shippingCountry?: string;
+    shippingProvince?: string;
+    shippingCity?: string;
+    shippingDistrict?: string;
+    shippingZipcode?: string;
+    shippingMethod?: string;
+    shippingCost?: number;
+    totalPrice: number;
+    items: Array<{
+      id: string;
+      name: string;
+      quantity: number;
+      price: number;
+      sizeCm?: number;
+      widthCm?: number;
+      lengthCm?: number;
+      heightCm?: number;
+      hasSpines?: boolean;
+    }>;
+  };
+
   const tabItems: Array<{ key: typeof tab; label: string }> = [
     { key: "heroes", label: t.hero },
     { key: "catalogue", label: t.catalogue },
     { key: "blogs", label: t.blog },
     { key: "news", label: t.news },
+    { key: "orders", label: "Orders" },
     { key: "info", label: t.info || "Info" },
     { key: "sold", label: t.updateStatus },
   ];
@@ -481,6 +539,43 @@ export default function AdminPage() {
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
   const [heroes, setHeroes] = useState<HeroItem[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
+  const [orders, setOrders] = useState<OrderRow[]>([]);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+
+  const selectedOrder = useMemo(
+    () => orders.find((order) => order.id === selectedOrderId) ?? null,
+    [orders, selectedOrderId],
+  ) as OrderRow | null;
+
+  const selectedPacking = useMemo(() => {
+    if (!selectedOrder) {
+      return null;
+    }
+
+    const plants: CactusPlant[] = selectedOrder.items
+      .filter((item) => item.quantity > 0 && item.sizeCm)
+      .map((item) => ({
+        id: item.id,
+        name: item.name,
+        sizeCm: item.sizeCm ?? 0,
+        widthCm: item.widthCm,
+        lengthCm: item.lengthCm,
+        heightCm: item.heightCm,
+        hasSpines: Boolean(item.hasSpines),
+        quantity: item.quantity,
+      }));
+
+    if (plants.length === 0) {
+      return null;
+    }
+
+    try {
+      return findOptimalBox(plants);
+    } catch {
+      return null;
+    }
+  }, [selectedOrder]);
 
   const [cactusForm, setCactusForm] = useState<CactusItem>(emptyCactus);
   const [blogForm, setBlogForm] = useState<BlogPost>(emptyBlog);
@@ -537,17 +632,20 @@ export default function AdminPage() {
   const [busy, setBusy] = useState(false);
 
   const loadData = useCallback(async () => {
-    const [cactiRes, blogsRes, heroesRes, newsRes, aboutRes] =
+    const [cactiRes, blogsRes, heroesRes, newsRes, ordersRes, aboutRes] =
       await Promise.all([
         fetch("/api/admin/cacti"),
         fetch("/api/admin/blogs"),
         fetch("/api/admin/heroes"),
         fetch("/api/admin/news"),
+        fetch("/api/admin/orders"),
         fetch("/api/admin/about"),
       ]);
 
     if (
-      [cactiRes, blogsRes, heroesRes, newsRes].some((x) => x.status === 401)
+      [cactiRes, blogsRes, heroesRes, newsRes, ordersRes].some(
+        (x) => x.status === 401,
+      )
     ) {
       router.push("/admin/login");
       return;
@@ -557,6 +655,8 @@ export default function AdminPage() {
     setBlogs(await blogsRes.json());
     setHeroes((await heroesRes.json()).map(normalizeHeroFormValue));
     setNews(await newsRes.json());
+    const ordersData = ordersRes.ok ? await ordersRes.json() : { orders: [] };
+    setOrders(ordersData.orders || []);
 
     if (aboutRes.ok) {
       const aboutData = await aboutRes.json();
@@ -608,6 +708,12 @@ export default function AdminPage() {
     router.push("/admin/login");
   }
 
+  const handleRefundSuccess = async () => {
+    await loadData();
+    setSelectedOrderId(null);
+    setRefundDialogOpen(false);
+  };
+
   async function translateText(text: string, sourceLang: string) {
     try {
       const response = await fetch("/api/admin/translate", {
@@ -634,9 +740,18 @@ export default function AdminPage() {
         cactusForm.growType === "seed" || cactusForm.growType === "graft"
       ),
       sizeCm: !Number.isFinite(cactusForm.sizeCm) || cactusForm.sizeCm <= 0,
-      widthCm: !cactusForm.widthCm || !Number.isFinite(cactusForm.widthCm) || cactusForm.widthCm <= 0,
-      lengthCm: !cactusForm.lengthCm || !Number.isFinite(cactusForm.lengthCm) || cactusForm.lengthCm <= 0,
-      heightCm: !cactusForm.heightCm || !Number.isFinite(cactusForm.heightCm) || cactusForm.heightCm <= 0,
+      widthCm:
+        !cactusForm.widthCm ||
+        !Number.isFinite(cactusForm.widthCm) ||
+        cactusForm.widthCm <= 0,
+      lengthCm:
+        !cactusForm.lengthCm ||
+        !Number.isFinite(cactusForm.lengthCm) ||
+        cactusForm.lengthCm <= 0,
+      heightCm:
+        !cactusForm.heightCm ||
+        !Number.isFinite(cactusForm.heightCm) ||
+        cactusForm.heightCm <= 0,
       price: !Number.isFinite(cactusForm.price) || cactusForm.price <= 0,
     };
 
@@ -1009,12 +1124,29 @@ export default function AdminPage() {
     await loadData();
   }
 
+  const activeTabLabel =
+    tabItems.find((item) => item.key === tab)?.label ?? t.dashboard;
+
   return (
     <main className="min-h-screen bg-muted/20 p-2 md:p-8">
-      <div className="mx-auto max-w-full md:max-w-7xl rounded-xl border bg-card p-2 md:p-6 space-y-4 overflow-x-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="font-display text-2xl font-bold">{t.dashboard}</h1>
-          <div className="flex items-center gap-2">
+      <div className="mx-auto max-w-full md:max-w-7xl rounded-3xl border bg-card p-4 md:p-6 shadow-sm ring-1 ring-border/10 space-y-6 overflow-x-hidden">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-2">
+            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+              Admin Dashboard
+            </p>
+            <div className="space-y-1">
+              <h1 className="text-3xl font-display font-bold">
+                {activeTabLabel}
+              </h1>
+              <p className="max-w-2xl text-sm text-muted-foreground">
+                Manage the {activeTabLabel.toLowerCase()} content, orders, and
+                site settings from the sidebar.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 justify-start sm:justify-end">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
@@ -1037,18 +1169,7 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {tabItems.map(({ key, label }) => (
-            <Button
-              key={key}
-              type="button"
-              variant={tab === key ? "default" : "outline"}
-              onClick={() => setTab(key)}
-            >
-              {label}
-            </Button>
-          ))}
-        </div>
+        {/* Top tab buttons removed — navigation is handled by the sidebar layout */}
 
         {tab === "catalogue" && (
           <div className="grid gap-6 lg:grid-cols-2">
@@ -1200,7 +1321,9 @@ export default function AdminPage() {
               </div>
 
               <div className="space-y-2">
-                {cactusRequiredErrors.widthCm && <span className="text-red-500">***</span>}
+                {cactusRequiredErrors.widthCm && (
+                  <span className="text-red-500">***</span>
+                )}
                 <FloatingInput
                   label="6. width"
                   invalid={cactusRequiredErrors.widthCm}
@@ -1214,14 +1337,18 @@ export default function AdminPage() {
                     }));
                     setCactusForm({
                       ...cactusForm,
-                      widthCm: e.target.value ? Number(e.target.value) : undefined,
+                      widthCm: e.target.value
+                        ? Number(e.target.value)
+                        : undefined,
                     });
                   }}
                 />
               </div>
 
               <div className="space-y-2">
-                {cactusRequiredErrors.lengthCm && <span className="text-red-500">***</span>}
+                {cactusRequiredErrors.lengthCm && (
+                  <span className="text-red-500">***</span>
+                )}
                 <FloatingInput
                   label="7. length"
                   invalid={cactusRequiredErrors.lengthCm}
@@ -1235,14 +1362,18 @@ export default function AdminPage() {
                     }));
                     setCactusForm({
                       ...cactusForm,
-                      lengthCm: e.target.value ? Number(e.target.value) : undefined,
+                      lengthCm: e.target.value
+                        ? Number(e.target.value)
+                        : undefined,
                     });
                   }}
                 />
               </div>
 
               <div className="space-y-2">
-                {cactusRequiredErrors.heightCm && <span className="text-red-500">***</span>}
+                {cactusRequiredErrors.heightCm && (
+                  <span className="text-red-500">***</span>
+                )}
                 <FloatingInput
                   label="8. height"
                   invalid={cactusRequiredErrors.heightCm}
@@ -1256,15 +1387,35 @@ export default function AdminPage() {
                     }));
                     setCactusForm({
                       ...cactusForm,
-                      heightCm: e.target.value ? Number(e.target.value) : undefined,
+                      heightCm: e.target.value
+                        ? Number(e.target.value)
+                        : undefined,
                     });
                   }}
                 />
               </div>
 
+              <div className="space-y-2 flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="hasSpines"
+                  checked={cactusForm.hasSpines}
+                  onChange={(e) => {
+                    setCactusForm({
+                      ...cactusForm,
+                      hasSpines: e.target.checked,
+                    });
+                  }}
+                  className="rounded border-input"
+                />
+                <label htmlFor="hasSpines" className="text-sm font-medium">
+                  9. Has Spines
+                </label>
+              </div>
+
               <div className="space-y-2">
                 <FloatingInput
-                  label={`9. ${t.price}`}
+                  label={`10. ${t.price}`}
                   invalid={cactusRequiredErrors.price}
                   type="number"
                   min={0}
@@ -2311,6 +2462,315 @@ export default function AdminPage() {
                 ))}
               </div>
             </div>
+          </div>
+        )}
+
+        {tab === "orders" && (
+          <div className="space-y-4 rounded-lg border p-4">
+            <h2 className="font-semibold">Orders</h2>
+            <div className="overflow-auto rounded-md border">
+              <table className="min-w-full divide-y divide-border text-sm">
+                <thead className="bg-muted">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Order ID</th>
+                    <th className="px-3 py-2 text-left">Customer</th>
+                    <th className="px-3 py-2 text-left">Email</th>
+                    <th className="px-3 py-2 text-left">Items</th>
+                    <th className="px-3 py-2 text-left">Total</th>
+                    <th className="px-3 py-2 text-left">Created</th>
+                    <th className="px-3 py-2 text-left">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border bg-card">
+                  {orders.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="px-3 py-4 text-center text-sm text-muted-foreground"
+                      >
+                        No orders found.
+                      </td>
+                    </tr>
+                  ) : (
+                    orders.map((order) => (
+                      <tr
+                        key={order.id}
+                        className="cursor-pointer hover:bg-slate-50"
+                        onClick={() => setSelectedOrderId(order.id)}
+                      >
+                        <td className="whitespace-nowrap px-3 py-3 font-medium">
+                          {order.id}
+                        </td>
+                        <td className="px-3 py-3">
+                          {order.contactName || "-"}
+                        </td>
+                        <td className="px-3 py-3">{order.contactEmail}</td>
+                        <td className="px-3 py-3">{order.items.length}</td>
+                        <td className="px-3 py-3">
+                          ฿{order.totalPrice.toLocaleString()}
+                        </td>
+                        <td className="px-3 py-3">
+                          {new Date(order.createdAt).toLocaleString()}
+                        </td>
+                        <td className="px-3 py-3">
+                          {order.refundStatus === "full"
+                            ? "Fully Refunded"
+                            : order.refundStatus === "partial"
+                              ? "Partially Refunded"
+                              : order.paymentStatus === "paid"
+                                ? "Paid"
+                                : order.paymentStatus || "Unknown"}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {selectedOrder ? (
+              <div className="rounded-lg border p-4 bg-background">
+                <div className="flex items-center justify-between gap-4 mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold">Order details</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedOrder.id}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    {(selectedOrder.paymentStatus === "paid" ||
+                      selectedOrder.paymentStatus === "partially_refunded") && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setRefundDialogOpen(true)}
+                      >
+                        Process Refund
+                      </Button>
+                    )}
+                    <button
+                      type="button"
+                      className="rounded-md border px-3 py-2 text-sm hover:bg-muted"
+                      onClick={() => setSelectedOrderId(null)}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                        Customer
+                      </p>
+                      <p>{selectedOrder.contactName || "-"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                        Email
+                      </p>
+                      <p>{selectedOrder.contactEmail}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                        Phone
+                      </p>
+                      <p>{selectedOrder.contactPhone || "-"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                        LINE
+                      </p>
+                      <p>{selectedOrder.contactLine || "-"}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                        Created
+                      </p>
+                      <p>
+                        {new Date(selectedOrder.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                        Items
+                      </p>
+                      <p>{selectedOrder.items.length}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                        Total
+                      </p>
+                      <p>฿{selectedOrder.totalPrice.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                        Note
+                      </p>
+                      <p>{selectedOrder.note || "-"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                        Shipping method
+                      </p>
+                      <p>{selectedOrder.shippingMethod || "-"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                        Payment status
+                      </p>
+                      <p className="font-semibold">
+                        {selectedOrder.refundStatus === "full"
+                          ? "Fully Refunded"
+                          : selectedOrder.refundStatus === "partial"
+                            ? "Partially Refunded"
+                            : selectedOrder.paymentStatus === "paid"
+                              ? "Paid"
+                              : selectedOrder.paymentStatus || "Unknown"}
+                      </p>
+                    </div>
+                    {selectedOrder.refundAmount !== undefined && (
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                          Refunded amount
+                        </p>
+                        <p>฿{selectedOrder.refundAmount.toLocaleString()}</p>
+                      </div>
+                    )}
+                    {selectedOrder.refundReason && (
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                          Refund reason
+                        </p>
+                        <p>{selectedOrder.refundReason}</p>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                        Shipping cost
+                      </p>
+                      <p>
+                        {selectedOrder.shippingCost !== undefined
+                          ? `฿${selectedOrder.shippingCost.toLocaleString()}`
+                          : "-"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 rounded-lg border bg-card p-4">
+                  <h4 className="mb-3 text-sm font-semibold">Items</h4>
+                  <div className="space-y-3">
+                    {selectedOrder.items.map((item) => (
+                      <div key={item.id} className="grid gap-2 md:grid-cols-6">
+                        <div className="md:col-span-2 font-medium">
+                          {item.name}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Qty: {item.quantity}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Unit: ฿{item.price.toLocaleString()}
+                        </div>
+                        <div className="md:col-span-2 text-right font-medium">
+                          ฿{(item.price * item.quantity).toLocaleString()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {selectedPacking ? (
+                  <div className="mt-6 rounded-lg border bg-card p-4">
+                    <h4 className="mb-3 text-sm font-semibold">
+                      Packing details
+                    </h4>
+                    {Array.isArray(selectedPacking) ? (
+                      selectedPacking.map((packing, index) => (
+                        <div key={index} className="space-y-3">
+                          <div className="text-sm font-medium">
+                            Box {packing.boxSize.name} •{" "}
+                            {packing.boxSize.widthCm}x{packing.boxSize.lengthCm}
+                            x{packing.boxSize.heightCm} cm
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {packing.totalCacti} cacti, {packing.layers.length}{" "}
+                            layer{packing.layers.length > 1 ? "s" : ""}
+                          </div>
+                          {packing.layers.map((layer) => (
+                            <div
+                              key={layer.layerNumber}
+                              className="rounded-lg border border-muted/70 p-3"
+                            >
+                              <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                                Layer {layer.layerNumber}
+                              </div>
+                              <div className="mt-2 text-sm">
+                                {layer.cactiInLayer
+                                  .map((plant) => plant.name)
+                                  .join(", ")}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="text-sm font-medium">
+                          Box {selectedPacking.boxSize.name} •{" "}
+                          {selectedPacking.boxSize.widthCm}x
+                          {selectedPacking.boxSize.lengthCm}x
+                          {selectedPacking.boxSize.heightCm} cm
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {selectedPacking.totalCacti} cacti,{" "}
+                          {selectedPacking.layers.length} layer
+                          {selectedPacking.layers.length > 1 ? "s" : ""}
+                        </div>
+                        {selectedPacking.layers.map((layer) => (
+                          <div
+                            key={layer.layerNumber}
+                            className="rounded-lg border border-muted/70 p-3"
+                          >
+                            <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                              Layer {layer.layerNumber}
+                            </div>
+                            <div className="mt-2 text-sm">
+                              {layer.cactiInLayer
+                                .map((plant) => plant.name)
+                                .join(", ")}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mt-6 rounded-lg border bg-card p-4 text-sm text-muted-foreground">
+                    No packing details available for this order.
+                  </div>
+                )}
+              </div>
+            ) : null}
+
+            {selectedOrder && (
+              <RefundDialog
+                open={refundDialogOpen}
+                onOpenChange={setRefundDialogOpen}
+                orderId={selectedOrder.id}
+                orderTotal={selectedOrder.totalPrice}
+                items={selectedOrder.items.map((item) => ({
+                  id: item.id,
+                  name: item.name,
+                  price: item.price,
+                  quantity: item.quantity,
+                }))}
+                onRefundSuccess={handleRefundSuccess}
+              />
+            )}
           </div>
         )}
 

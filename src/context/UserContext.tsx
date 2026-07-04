@@ -1,8 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import bcrypt from "bcryptjs";
-import { UserAccount, UserProfile } from "@/types/user";
+import { UserProfile } from "@/types/user";
 
 interface AuthResult {
   ok: boolean;
@@ -19,49 +18,51 @@ interface UserContextType {
     displayName?: string;
   }) => Promise<AuthResult>;
   login: (email: string, password: string) => Promise<AuthResult>;
-  logout: () => void;
+  loginWithOAuth: (input: {
+    email: string;
+    displayName?: string;
+    avatarUrl?: string;
+    provider: string;
+    oauthId: string;
+  }) => Promise<AuthResult>;
+  logout: () => Promise<void>;
   updateProfile: (
     updates: Partial<Omit<UserProfile, "email">>,
   ) => Promise<AuthResult>;
+  changePassword: (
+    currentPassword: string,
+    newPassword: string,
+  ) => Promise<AuthResult>;
 }
-
-const USER_STORAGE_KEY = "cactistock_current_user";
-const USER_STORE_KEY = "cactistock_user_store";
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
-
-function loadUserStore(): Record<string, UserAccount> {
-  if (typeof window === "undefined") return {};
-  const saved = window.localStorage.getItem(USER_STORE_KEY);
-  return saved ? JSON.parse(saved) : {};
-}
-
-function saveUserStore(store: Record<string, UserAccount>) {
-  window.localStorage.setItem(USER_STORE_KEY, JSON.stringify(store));
-}
-
-function loadCurrentUser(): UserProfile | null {
-  if (typeof window === "undefined") return null;
-  const saved = window.localStorage.getItem(USER_STORAGE_KEY);
-  return saved ? JSON.parse(saved) : null;
-}
-
-function saveCurrentUser(user: UserProfile) {
-  window.localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
-}
-
-function clearCurrentUser() {
-  window.localStorage.removeItem(USER_STORAGE_KEY);
-}
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const current = loadCurrentUser();
-    setUser(current);
-    setLoading(false);
+    async function loadSession() {
+      try {
+        const response = await fetch("/api/user/session", {
+          cache: "no-store",
+        });
+        if (!response.ok) {
+          return;
+        }
+
+        const result = await response.json();
+        if (result?.ok && result.user) {
+          setUser(result.user as UserProfile);
+        }
+      } catch (error) {
+        console.error("Failed to load user session", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadSession();
   }, []);
 
   const register = async ({
@@ -78,25 +79,32 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       return { ok: false, error: "Please provide email and password." };
     }
 
-    const users = loadUserStore();
-    if (users[normalizedEmail]) {
-      return { ok: false, error: "Account already exists." };
+    const response = await fetch("/api/user/account", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "register",
+        email: normalizedEmail,
+        password,
+        displayName: displayName?.trim(),
+      }),
+    });
+
+    let result: any = null;
+    try {
+      result = await response.json();
+    } catch (e) {
+      result = null;
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
-    const profile: UserProfile = {
-      email: normalizedEmail,
-      displayName: displayName?.trim() || normalizedEmail,
-    };
+    if (!response.ok || !result?.ok) {
+      return {
+        ok: false,
+        error: result?.error || response.statusText || "Registration failed.",
+      };
+    }
 
-    users[normalizedEmail] = {
-      ...profile,
-      passwordHash,
-    };
-    saveUserStore(users);
-    saveCurrentUser(profile);
-    setUser(profile);
-
+    setUser(result.user as UserProfile);
     return { ok: true };
   };
 
@@ -105,27 +113,95 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     password: string,
   ): Promise<AuthResult> => {
     const normalizedEmail = email.trim().toLowerCase();
-    const users = loadUserStore();
-    const account = users[normalizedEmail];
-
-    if (!account) {
-      return { ok: false, error: "No account found with this email." };
+    if (!normalizedEmail || !password) {
+      return { ok: false, error: "Please provide email and password." };
     }
 
-    const match = await bcrypt.compare(password, account.passwordHash);
-    if (!match) {
-      return { ok: false, error: "Incorrect password." };
+    const response = await fetch("/api/user/account", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "login",
+        email: normalizedEmail,
+        password,
+      }),
+    });
+
+    let result: any = null;
+    try {
+      result = await response.json();
+    } catch (e) {
+      result = null;
     }
 
-    const { passwordHash, ...profile } = account;
-    saveCurrentUser(profile);
-    setUser(profile);
+    if (!response.ok || !result?.ok) {
+      return {
+        ok: false,
+        error: result?.error || response.statusText || "Login failed.",
+      };
+    }
+
+    setUser(result.user as UserProfile);
     return { ok: true };
   };
 
-  const logout = () => {
-    setUser(null);
-    clearCurrentUser();
+  const loginWithOAuth = async ({
+    email,
+    displayName,
+    avatarUrl,
+    provider,
+    oauthId,
+  }: {
+    email: string;
+    displayName?: string;
+    avatarUrl?: string;
+    provider: string;
+    oauthId: string;
+  }): Promise<AuthResult> => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || !oauthId) {
+      return { ok: false, error: "Missing auth information." };
+    }
+
+    const response = await fetch("/api/user/account", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "oauth",
+        email: normalizedEmail,
+        displayName: displayName?.trim(),
+        avatarUrl,
+        provider,
+        oauthId,
+      }),
+    });
+
+    let result: any = null;
+    try {
+      result = await response.json();
+    } catch (e) {
+      result = null;
+    }
+
+    if (!response.ok || !result?.ok) {
+      return {
+        ok: false,
+        error: result?.error || response.statusText || "OAuth login failed.",
+      };
+    }
+
+    setUser(result.user as UserProfile);
+    return { ok: true };
+  };
+
+  const logout = async () => {
+    try {
+      await fetch("/api/user/session", { method: "DELETE" });
+    } catch (error) {
+      console.error("Logout failed", error);
+    } finally {
+      setUser(null);
+    }
   };
 
   const updateProfile = async (
@@ -135,23 +211,66 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       return { ok: false, error: "Not authenticated." };
     }
 
-    const users = loadUserStore();
-    const account = users[user.email];
-    if (!account) {
-      return { ok: false, error: "User record not found." };
+    const response = await fetch("/api/user/account", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: user.email,
+        updates,
+      }),
+    });
+
+    let result: any = null;
+    try {
+      result = await response.json();
+    } catch (e) {
+      result = null;
     }
 
-    const updatedAccount: UserAccount = {
-      ...account,
-      ...updates,
-    };
+    if (!response.ok || !result?.ok) {
+      return {
+        ok: false,
+        error: result?.error || response.statusText || "Update failed.",
+      };
+    }
 
-    users[user.email] = updatedAccount;
-    saveUserStore(users);
+    setUser(result.user as UserProfile);
+    return { ok: true };
+  };
 
-    const { passwordHash, ...profile } = updatedAccount;
-    saveCurrentUser(profile);
-    setUser(profile);
+  const changePassword = async (
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<AuthResult> => {
+    if (!user) {
+      return { ok: false, error: "Not authenticated." };
+    }
+
+    const response = await fetch("/api/user/account", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "change-password",
+        email: user.email,
+        currentPassword,
+        newPassword,
+      }),
+    });
+
+    let result: any = null;
+    try {
+      result = await response.json();
+    } catch (e) {
+      result = null;
+    }
+
+    if (!response.ok || !result?.ok) {
+      return {
+        ok: false,
+        error:
+          result?.error || response.statusText || "Password change failed.",
+      };
+    }
 
     return { ok: true };
   };
@@ -163,8 +282,10 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       loading,
       register,
       login,
+      loginWithOAuth,
       logout,
       updateProfile,
+      changePassword,
     }),
     [user, loading],
   );

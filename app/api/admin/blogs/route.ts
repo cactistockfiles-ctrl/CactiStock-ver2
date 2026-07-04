@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getBlogs, saveBlogs } from "@/lib/content-store";
 import { badRequest, requireAdmin, revalidatePublicContent } from "@/lib/api-helpers";
+import { deleteImageUrlsFromR2 } from "@/lib/r2-server";
 import { BlogPost } from "@/types/content";
 
 export async function GET() {
@@ -75,6 +76,14 @@ export async function DELETE(req: NextRequest) {
   }
 
   const rows = await getBlogs();
+  const itemToDelete = rows.find((x) => x.id === id);
+  if (!itemToDelete) {
+    return badRequest("Blog not found");
+  }
+
+  const imageUrls = [itemToDelete.coverImage, ...(itemToDelete.gallery ?? [])].filter(Boolean);
+  await deleteImageUrlsFromR2(imageUrls);
+
   const nextRows = rows.filter((x) => x.id !== id);
   await saveBlogs(nextRows);
   

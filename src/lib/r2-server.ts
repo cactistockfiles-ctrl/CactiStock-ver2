@@ -170,3 +170,17 @@ export async function deleteImageFromR2(url: string): Promise<void> {
     // Don't throw - allow deletion to proceed even if file deletion fails
   }
 }
+
+export async function deleteImageUrlsFromR2(urls: string[] | undefined): Promise<void> {
+  if (!urls?.length) return;
+
+  for (const url of urls.filter(Boolean)) {
+    if (!url.startsWith("http")) continue;
+
+    try {
+      await deleteImageFromR2(url);
+    } catch (error) {
+      console.error(`Failed to delete R2 URL ${url}:`, error);
+    }
+  }
+}

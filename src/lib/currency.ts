@@ -10,9 +10,9 @@ interface ExchangeRateResponse {
 // Currency codes for each locale
 export const LOCALE_CURRENCIES: Record<string, string> = {
   th: "THB",
-  en: "USD",
-  zh: "CNY",
-  id: "IDR",
+  en: "THB",
+  zh: "THB",
+  id: "THB",
 };
 
 // Cache exchange rates for 1 hour

@@ -2,21 +2,54 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ShoppingCart, Menu, X } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useLocale } from "@/context/LocaleContext";
 import { useUser } from "@/context/UserContext";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useState } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { localeLabels, LOCALES } from "@/lib/i18n";
 import logo from "@/assets/logo.png";
 
 const Navbar = () => {
   const { totalItems } = useCart();
   const pathname = usePathname();
+  const router = useRouter();
   const { locale, t } = useLocale();
   const { user, isAuthenticated, logout } = useUser();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const changeLocale = (targetLocale: (typeof LOCALES)[number]) => {
+    const parts = pathname?.split("/") || [];
+    if (parts.length < 2) {
+      router.push(`/${targetLocale}`);
+      return;
+    }
+
+    parts[1] = targetLocale;
+    router.push(parts.join("/"));
+  };
+
+  const profileInitials = user?.displayName
+    ? user.displayName
+        .split(" ")
+        .map((part) => part[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
+    : user?.email?.charAt(0).toUpperCase() || "";
 
   const links = [
     { to: `/${locale}`, label: t("nav.home") },
@@ -32,14 +65,14 @@ const Navbar = () => {
           <Image
             src={logo}
             alt="Cacti Stock"
-            width={40}
-            height={40}
-            className="h-10 w-10"
+            width={128}
+            height={128}
+            className="h-62 w-62"
             priority
           />
-          <span className="font-display text-xl font-bold text-primary">
+          {/* <span className="font-display text-xl font-bold text-primary">
             Cacti Stock
-          </span>
+          </span> */}
         </Link>
 
         {/* Desktop Navigation */}
@@ -60,35 +93,89 @@ const Navbar = () => {
         </div>
 
         <div className="flex items-center gap-4">
-          <Link
-            href={`/${locale}/cart`}
-            className="relative flex items-center justify-center rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 w-10 h-10 md:px-4 md:py-2 md:w-auto md:h-auto md:gap-2"
-          >
-            <ShoppingCart className="h-4 w-4" />
-            <span className="hidden md:inline">{t("nav.cart")}</span>
-            {totalItems > 0 && (
-              <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-xs font-bold text-accent-foreground">
-                {totalItems}
-              </span>
-            )}
-          </Link>
+          {isAuthenticated ? (
+            <Link
+              href={`/${locale}/cart`}
+              className="relative flex items-center justify-center rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 w-10 h-10 md:px-4 md:py-2 md:w-auto md:h-auto md:gap-2"
+            >
+              <ShoppingCart className="h-4 w-4" />
+              <span className="hidden md:inline">{t("nav.cart")}</span>
+              {totalItems > 0 && (
+                <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-xs font-bold text-accent-foreground">
+                  {totalItems}
+                </span>
+              )}
+            </Link>
+          ) : null}
 
           {isAuthenticated ? (
-            <>
-              <Link
-                href={`/${locale}/profile`}
-                className="hidden md:inline rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
-              >
-                {user?.displayName || user?.email}
-              </Link>
-              <button
-                type="button"
-                className="hidden md:inline rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
-                onClick={logout}
-              >
-                Logout
-              </button>
-            </>
+            <div className="hidden md:block">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-input bg-background text-sm font-medium text-muted-foreground transition-colors hover:bg-muted focus:outline-none"
+                    aria-label="Open profile menu"
+                  >
+                    <Avatar className="h-10 w-10">
+                      {user?.avatarUrl ? (
+                        <AvatarImage
+                          src={user.avatarUrl}
+                          alt={user.displayName || user.email || "User avatar"}
+                        />
+                      ) : null}
+                      <AvatarFallback>{profileInitials}</AvatarFallback>
+                    </Avatar>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  sideOffset={8}
+                  className="w-64"
+                >
+                  <div className="px-4 py-3">
+                    <p className="text-sm font-semibold text-foreground">
+                      {user?.displayName || user?.email}
+                    </p>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href={`/${locale}/profile`} className="w-full">
+                      {t("nav.profile")}
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="px-4 py-3 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-white data-[state=open]:text-white">
+                      Language
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="w-56">
+                      {LOCALES.map((lang) => (
+                        <DropdownMenuItem
+                          key={lang}
+                          onSelect={() => changeLocale(lang)}
+                          className={
+                            lang === locale
+                              ? "font-semibold text-foreground"
+                              : "text-muted-foreground"
+                          }
+                        >
+                          {localeLabels[lang]}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      logout();
+                    }}
+                  >
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           ) : (
             <>
               <Link
@@ -97,18 +184,11 @@ const Navbar = () => {
               >
                 Login
               </Link>
-              <Link
-                href={`/${locale}/register`}
-                className="hidden md:inline rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-              >
-                Register
-              </Link>
+              <div className="hidden md:flex">
+                <LanguageSwitcher locale={locale} />
+              </div>
             </>
           )}
-
-          <div className="hidden md:flex">
-            <LanguageSwitcher locale={locale} />
-          </div>
 
           {/* Mobile Menu Button */}
           <button
@@ -127,69 +207,97 @@ const Navbar = () => {
       </div>
 
       {/* Mobile Menu */}
-      {mobileMenuOpen && (
-        <div className="md:hidden border-t bg-card p-4">
-          <div className="flex flex-col gap-4">
-            {links.map((link) => (
-              <Link
-                key={link.to}
-                href={link.to}
-                onClick={() => setMobileMenuOpen(false)}
-                className={`text-sm transition-colors hover:text-primary ${
-                  pathname === link.to
-                    ? "font-bold text-primary"
-                    : "font-medium text-muted-foreground"
-                }`}
-              >
-                {link.label}
-              </Link>
-            ))}
-            <div className="flex flex-col gap-3 pt-4 border-t">
-              {isAuthenticated ? (
-                <>
-                  <Link
-                    href={`/${locale}/profile`}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="text-sm font-medium text-muted-foreground hover:text-primary"
-                  >
-                    {user?.displayName || user?.email}
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      logout();
-                      setMobileMenuOpen(false);
-                    }}
-                    className="text-left text-sm font-medium text-muted-foreground hover:text-primary"
-                  >
-                    Logout
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Link
-                    href={`/${locale}/login`}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="text-sm font-medium text-muted-foreground hover:text-primary"
-                  >
-                    Login
-                  </Link>
-                  <Link
-                    href={`/${locale}/register`}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="text-sm font-medium text-muted-foreground hover:text-primary"
-                  >
-                    Register
-                  </Link>
-                </>
-              )}
-              <div className="flex items-center gap-2">
-                <LanguageSwitcher locale={locale} />
+      <div
+        className={`md:hidden absolute right-0 top-full z-40 w-[80vw] overflow-hidden border-t bg-card shadow-lg transition-all duration-300 ease-in-out ${
+          mobileMenuOpen
+            ? "max-h-[1000px] opacity-100"
+            : "max-h-0 opacity-0 pointer-events-none"
+        }`}
+      >
+        <div
+          className={`flex flex-col gap-4 ${mobileMenuOpen ? "p-4" : "p-0"}`}
+        >
+          {isAuthenticated && (
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                router.push(`/${locale}/profile`);
+              }}
+              className="flex items-center gap-3 text-left"
+            >
+              <Avatar className="h-12 w-12">
+                {user?.avatarUrl ? (
+                  <AvatarImage
+                    src={user.avatarUrl}
+                    alt={user.displayName || user.email || "User avatar"}
+                  />
+                ) : null}
+                <AvatarFallback>{profileInitials}</AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  {user?.displayName || user?.email}
+                </p>
               </div>
+            </button>
+          )}
+          {links.map((link) => (
+            <Link
+              key={link.to}
+              href={link.to}
+              onClick={() => setMobileMenuOpen(false)}
+              className={`text-sm transition-colors hover:text-primary ${
+                pathname === link.to
+                  ? "font-bold text-primary"
+                  : "font-medium text-muted-foreground"
+              }`}
+            >
+              {link.label}
+            </Link>
+          ))}
+          <div className="flex flex-col gap-3 pt-4 border-t">
+            {isAuthenticated ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    logout();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="text-left text-sm font-medium text-muted-foreground hover:text-primary"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href={`/${locale}/login`}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-sm font-medium text-muted-foreground hover:text-primary"
+                >
+                  Login
+                </Link>
+                <Link
+                  href={`/${locale}/register`}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-sm font-medium text-muted-foreground hover:text-primary"
+                >
+                  Register
+                </Link>
+              </>
+            )}
+            <div className="flex items-center gap-2">
+              <LanguageSwitcher
+                locale={locale}
+                disableBorder
+                triggerClassName="w-auto px-0 py-0 text-sm text-muted-foreground hover:text-primary"
+              />
             </div>
           </div>
         </div>
-      )}
+      </div>
     </nav>
   );
 };

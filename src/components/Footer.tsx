@@ -40,20 +40,22 @@ const Footer = () => {
 
   return (
     <footer className="bg-cactus-900 text-cactus-50">
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid gap-8 md:grid-cols-4">
-          <div className="space-y-4">
-            <h3 className="font-display text-2xl font-bold">Cacti Stock</h3>
-            <p className="mt-2 text-sm text-cactus-200">
+      <div className="container mx-auto px-4 py-8 md:py-12">
+        <div className="grid gap-6 md:gap-8 md:grid-cols-4">
+          <div className="space-y-3 md:space-y-4">
+            <h3 className="font-display text-xl md:text-2xl font-bold">
+              Cacti Stock
+            </h3>
+            <p className="mt-2 text-xs sm:text-sm text-cactus-200">
               {t("footer.description")}
             </p>
           </div>
 
-          <div className="space-y-4">
-            <h4 className="font-display text-lg font-semibold">
+          <div className="hidden md:block space-y-3 md:space-y-4">
+            <h4 className="font-display text-base md:text-lg font-semibold">
               {t("footer.quickLinks")}
             </h4>
-            <ul className="space-y-2 text-sm">
+            <ul className="space-y-2 text-xs sm:text-sm">
               <li>
                 <Link
                   href={`/${locale}/catalogue`}
@@ -81,11 +83,11 @@ const Footer = () => {
             </ul>
           </div>
 
-          <div className="space-y-4">
-            <h4 className="font-display text-lg font-semibold">
+          <div className="space-y-3 md:space-y-4">
+            <h4 className="font-display text-base md:text-lg font-semibold">
               {t("footer.contact")}
             </h4>
-            <ul className="space-y-2 text-sm text-cactus-200">
+            <ul className="space-y-1.5 text-xs sm:text-sm text-cactus-200">
               <li>
                 Email: {aboutData?.contactEmail || "cactistockfiles@gmail.com"}
               </li>
@@ -95,9 +97,11 @@ const Footer = () => {
             </ul>
           </div>
 
-          <div className="space-y-4">
-            <h4 className="font-display text-lg font-semibold">Follow Us</h4>
-            <div className="flex gap-4">
+          <div className="space-y-3 md:space-y-4">
+            <h4 className="font-display text-base md:text-lg font-semibold">
+              Follow Us
+            </h4>
+            <div className="flex gap-3 md:gap-4">
               {aboutData?.showInstagram && aboutData.instagram && (
                 <a
                   href={aboutData.instagram}
@@ -142,9 +146,9 @@ const Footer = () => {
           </div>
         </div>
 
-        <div className="mt-12 border-t border-cactus-800 pt-8 text-center text-sm text-cactus-300">
+        <div className="mt-8 border-t border-cactus-800 pt-6 text-center text-xs sm:text-sm text-cactus-300">
           <p>{t("footer.copyright")}</p>
-          <p className="mt-2">
+          <p className="mt-1.5">
             <Link
               href="/admin/login"
               className="text-cactus-400 hover:text-cactus-50 transition-colors"

@@ -3,6 +3,9 @@ import "./globals.css";
 import { siteUrl } from "@/lib/config";
 import Loading from "@/components/Loading";
 import { Suspense } from "react";
+import logoImage from "@/assets/logo.png";
+import CookieBanner from "@/components/ui/CookieBanner";
+import AnalyticsGate from "@/components/ui/AnalyticsGate";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -11,9 +14,9 @@ export const metadata: Metadata = {
     template: "Cacti Stock | %s",
   },
   icons: {
-    icon: "/icon.png",
-    shortcut: "/icon.png",
-    apple: "/icon.png",
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/favicon.ico",
   },
   description:
     "Cacti Stock - ร้านขายกระบองเพชรหายากคุณภาพสูง รวบรวมสายพันธุ์แท้จากทั่วโลก ต้นไม้ทุกต้นผ่านการคัดเลือกและดูแลอย่างพิถีพิถัน พร้อมคำปรึกษาการดูแลฟรี",
@@ -29,7 +32,7 @@ export const metadata: Metadata = {
     siteName: "Cacti Stock",
     images: [
       {
-        url: "/icon.png",
+        url: logoImage.src,
         width: 512,
         height: 512,
         alt: "Cacti Stock Logo",
@@ -41,7 +44,7 @@ export const metadata: Metadata = {
     title: "Cacti Stock - ร้านขายกระบองเพชรหายากคุณภาพสูง",
     description:
       "Cacti Stock - ร้านขายกระบองเพชรหายากคุณภาพสูง รวบรวมสายพันธุ์แท้จากทั่วโลก ต้นไม้ทุกต้นผ่านการคัดเลือกและดูแลอย่างพิถีพิถัน พร้อมคำปรึกษาการดูแลฟรี",
-    images: ["/icon.png"],
+    images: [logoImage.src],
   },
   robots: {
     index: true,
@@ -65,7 +68,7 @@ export default function RootLayout({
     url: siteUrl,
     email: "cactistockfiles@gmail.com",
     priceRange: "฿฿฿",
-    image: `${siteUrl}/icon.png`,
+    image: `${siteUrl}${logoImage.src}`,
   };
 
   return (
@@ -73,6 +76,7 @@ export default function RootLayout({
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
+        <link rel="shortcut icon" href="/favicon.ico" />
         <link rel="preconnect" href="https://res.cloudinary.com" />
         <link rel="preconnect" href="https://*.r2.dev" />
         <link rel="preconnect" href="https://*.r2.cloudflarestorage.com" />
@@ -83,6 +87,8 @@ export default function RootLayout({
       </head>
       <body>
         <Suspense fallback={<Loading />}>{children}</Suspense>
+        <CookieBanner />
+        <AnalyticsGate />
       </body>
     </html>
   );

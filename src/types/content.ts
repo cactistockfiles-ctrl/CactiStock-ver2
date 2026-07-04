@@ -1,5 +1,16 @@
 export type Locale = "th" | "en" | "zh" | "id";
 
+export type DragonCourierZone = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I";
+
+export interface ShippingAddress {
+  country: string;
+  province?: string;
+  city?: string;
+  district?: string;
+  zipcode?: string;
+  addressLine: string;
+}
+
 export interface Translations {
   th?: string;
   en?: string;
@@ -16,6 +27,7 @@ export interface CactusItem {
   widthCm?: number;
   lengthCm?: number;
   heightCm?: number;
+  hasSpines: boolean;
   price: number;
   growType: "seed" | "graft";
   description: string;
@@ -72,4 +84,23 @@ export interface NewsItem {
   coverImage: string;
   gallery: string[];
   createdAt: string;
+}
+
+// Dragon Courier rates stored as: { zone: { weightKg: priceTHB } }
+export type DragonCourierRates = Record<DragonCourierZone, Record<number, number>>;
+
+export interface DragonCourierRatesRecord {
+  id: string;
+  rates: Record<string, Record<string, number>>; // Firestore stores object keys as strings
+  updatedAt: string;
+  updatedBy?: string;
+  note?: string;
+}
+
+export interface DragonCourierRatesHistoryItem {
+  id: string;
+  rates: Record<string, Record<string, number>>;
+  publishedAt: string;
+  publishedBy?: string;
+  note?: string;
 }

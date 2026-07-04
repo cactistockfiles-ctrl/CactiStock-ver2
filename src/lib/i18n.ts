@@ -25,6 +25,7 @@ const messages: Record<Locale, MessageTree> = {
       about: "เกี่ยวกับเรา",
       blog: "บล็อก",
       cart: "ตะกร้า",
+      profile: "บัญชีของฉัน",
     },
     home: {
       title: "คอลเลกชัน\\nกระบองเพชรหายาก",
@@ -208,6 +209,7 @@ const messages: Record<Locale, MessageTree> = {
       about: "About",
       blog: "Blog",
       cart: "Cart",
+      profile: "My Account",
     },
     home: {
       title: "Rare\\nCactus Collection",
@@ -285,12 +287,13 @@ const messages: Record<Locale, MessageTree> = {
       linePlaceholder: "LINE ID (if available)",
       notePlaceholder: "Additional Notes",
       total: "Total",
-      submitting: "Submitting...",
-      submit: "Submit Order for Seller Review",
-      submitDesc: "Order details will be sent to cactistockfiles@gmail.com",
-      confirmDesc: "Seller will contact you at your email to confirm plant health before shipping",
-      emailRequired: "Please enter email for contact",
-      submitError: "Submission failed. Please try again.",
+      submitting: "กำลังดำเนินการ...",
+      submit: "ชำระเงิน",
+      submitDesc: "เมื่อกดชำระเงิน ระบบจะนำคุณไปยังหน้าชำระเงินที่ปลอดภัย",
+      confirmDesc: "หลังชำระเงินเสร็จสิ้น ระบบจะยืนยันข้อมูลการจัดส่งให้คุณ",
+      emailRequired: "กรุณากรอกอีเมลสำหรับติดต่อ",
+      submitError: "การสมัครคำสั่งซื้อไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
+
       submitSuccess: "Seller will contact you at Email: {email} to confirm all selected plants are in healthy condition and ready for quick delivery",
     },
     blog: {

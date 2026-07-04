@@ -5,7 +5,10 @@ import { isLocale, LOCALES } from "@/lib/i18n";
 const PUBLIC_FILE = /\.(.*)$/;
 
 function getSecret() {
-  const secret = process.env.ADMIN_JWT_SECRET || "change_me_please";
+  const secret = process.env.ADMIN_JWT_SECRET;
+  if (!secret) {
+    throw new Error("ADMIN_JWT_SECRET environment variable is required");
+  }
   return new TextEncoder().encode(secret);
 }
 

@@ -42,6 +42,9 @@ const CactusDetailModal = ({ cactus, open, onOpenChange }: Props) => {
 
   if (!cactus) return null;
 
+  const isReserved =
+    (cactus as CactusItem & { status?: string }).status === "reserved";
+
   const allImages = [
     cactus.images.top,
     cactus.images.side1,
@@ -120,12 +123,13 @@ const CactusDetailModal = ({ cactus, open, onOpenChange }: Props) => {
                   {priceFormatted}
                 </span>
                 <Button
-                  disabled={cactus.isSold}
+                  disabled={cactus.isSold || isReserved}
                   onClick={() => {
                     if (!user) {
                       setAuthOpen(true);
                       return;
                     }
+                    if (cactus.isSold || isReserved) return;
                     addToCart(cactus);
                     onOpenChange(false);
                   }}
@@ -134,7 +138,9 @@ const CactusDetailModal = ({ cactus, open, onOpenChange }: Props) => {
                   <ShoppingCart className="h-4 w-4" />
                   {cactus.isSold
                     ? t("catalogue.sold")
-                    : t("common.addToCartLong")}
+                    : isReserved
+                      ? t("common.reserved")
+                      : t("common.addToCartLong")}
                 </Button>
                 <AuthModal
                   open={authOpen}
