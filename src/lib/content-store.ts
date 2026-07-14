@@ -213,3 +213,79 @@ export function validateDragonCourierRatesJson(obj: unknown): { ok: boolean; err
 
   return { ok: errors.length === 0, errors: errors.length ? errors : undefined };
 }
+
+/* ---------- packing settings ---------- */
+
+const PACKING_COLLECTION = "packingSettings";
+const PACKING_HISTORY = "packingSettingsHistory";
+
+export type PackingSettingsDoc = {
+  id: string;
+  tissuePaddingNoSpines?: number;
+  tissuePaddingSpines?: number;
+  tissueSpacingBetweenLayers?: number;
+  tissueSpacingBottom?: number;
+  updatedAt: string;
+  updatedBy?: string;
+  note?: string;
+};
+
+export async function getPackingSettings(): Promise<PackingSettingsDoc | null> {
+  try {
+    const db = getDb();
+    const doc = await db.collection(PACKING_COLLECTION).doc("current").get();
+    if (!doc.exists) return null;
+    return doc.data() as PackingSettingsDoc;
+  } catch (err) {
+    console.error("getPackingSettings error:", err);
+    return null;
+  }
+}
+
+export async function savePackingSettings(payload: Partial<PackingSettingsDoc> & { updatedBy?: string; note?: string }) {
+  const db = getDb();
+  const now = new Date().toISOString();
+
+  const record: PackingSettingsDoc = {
+    id: "current",
+    tissuePaddingNoSpines: payload.tissuePaddingNoSpines ?? undefined,
+    tissuePaddingSpines: payload.tissuePaddingSpines ?? undefined,
+    tissueSpacingBetweenLayers: payload.tissueSpacingBetweenLayers ?? undefined,
+    tissueSpacingBottom: payload.tissueSpacingBottom ?? undefined,
+    updatedAt: now,
+    updatedBy: payload.updatedBy || "admin",
+    note: payload.note || "",
+  };
+
+  await db.collection(PACKING_COLLECTION).doc("current").set(record);
+
+  const historyItem = {
+    id: `published-${Date.now()}`,
+    settings: record,
+    publishedAt: now,
+    publishedBy: payload.updatedBy || "admin",
+    note: payload.note || "",
+  };
+  await db.collection(PACKING_HISTORY).doc(historyItem.id).set(historyItem);
+}
+
+export function validatePackingSettingsJson(obj: unknown): { ok: boolean; errors?: string[] } {
+  const errors: string[] = [];
+  if (typeof obj !== "object" || obj === null) {
+    return { ok: false, errors: ["Root must be an object"] };
+  }
+
+  const maybe = obj as any;
+
+  // Validate new PackingConfig format (bottomFiller, topFiller, layerFiller)
+  for (const numKey of ["bottomFiller", "topFiller", "layerFiller"]) {
+    if (maybe[numKey] !== undefined) {
+      const val = Number(maybe[numKey]);
+      if (!Number.isFinite(val) || val < 0) {
+        errors.push(`${numKey} must be a non-negative number`);
+      }
+    }
+  }
+
+  return { ok: errors.length === 0, errors: errors.length ? errors : undefined };
+}

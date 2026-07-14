@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { CactusItem } from "@/types/content";
 import { useCart } from "@/context/CartContext";
 import { useLocale } from "@/context/LocaleContext";
-import { useCurrency } from "@/hooks/useCurrency";
+import { formatPrice } from "@/lib/currency";
 import { useUser } from "@/context/UserContext";
 import AuthModal from "@/components/AuthModal";
 import { useState } from "react";
@@ -26,8 +26,8 @@ function imgSrc(url: string) {
 const CactusCard = ({ cactus, onSelect }: Props) => {
   const { addToCart, items } = useCart();
   const { user } = useUser();
-  const { t } = useLocale();
-  const { formatted: priceFormatted } = useCurrency(cactus.price);
+  const { t, locale } = useLocale();
+  const priceFormatted = formatPrice(cactus.price, locale);
   const [addedToCart, setAddedToCart] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
 

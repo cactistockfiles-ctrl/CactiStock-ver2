@@ -112,19 +112,23 @@ const DRAGON_COURIER_RATES: Record<DragonCourierZone, Record<number, number>> = 
   },
 };
 
-// Map countries to Dragon Courier zones
 const COUNTRY_TO_ZONE: Record<string, DragonCourierZone> = {
   "united states": "A",
   "united states of america": "A",
   "usa": "A",
   "us": "A",
+  "america": "A",
   "alaska": "B",
   "hawaii": "B",
   "puerto rico": "B",
   "canada": "B",
   "united kingdom": "C",
   "uk": "C",
+  "great britain": "C",
   "england": "C",
+  "scotland": "C",
+  "wales": "C",
+  "northern ireland": "C",
   "france": "D",
   "germany": "D",
   "italy": "D",
@@ -139,18 +143,26 @@ const COUNTRY_TO_ZONE: Record<string, DragonCourierZone> = {
   "finland": "D",
   "poland": "D",
   "czech republic": "D",
+  "czechia": "D",
   "hungary": "D",
   "romania": "D",
   "portugal": "D",
   "greece": "D",
   "russia": "E",
+  "russian federation": "E",
   "singapore": "F",
   "hong kong": "H",
+  "hongkong": "H",
   "south africa": "I",
+  "sa": "I",
 };
 
+function normalizeCountry(country: string): string {
+  return country.trim().toLowerCase();
+}
+
 export function getCountryZone(country: string): DragonCourierZone | null {
-  return COUNTRY_TO_ZONE[country.trim().toLowerCase()] || null;
+  return COUNTRY_TO_ZONE[normalizeCountry(country)] || null;
 }
 
 export function calculateVolumetricWeight(
@@ -165,33 +177,38 @@ export function calculateVolumetricWeight(
 export function getShippingCostByZone(
   zone: DragonCourierZone,
   weightKg: number,
-): number {
+): number | null {
   const zoneRates = DRAGON_COURIER_RATES[zone];
-  if (!zoneRates) return 0;
+  if (!zoneRates) {
+    return null;
+  }
 
-  // Round up to nearest 0.5 kg or find exact rate
   const weights = Object.keys(zoneRates)
     .map(Number)
     .sort((a, b) => a - b);
 
-  let rate = 0;
+  let matchedWeight: number | null = null;
   for (const w of weights) {
     if (weightKg <= w) {
-      rate = zoneRates[w];
+      matchedWeight = w;
       break;
     }
   }
 
-  // If weight exceeds all listed rates, use the last rate
-  if (rate === 0 && weights.length > 0) {
+  if (matchedWeight === null) {
     const lastWeight = weights[weights.length - 1];
-    rate = zoneRates[lastWeight];
-    // Apply bulk rate for weights over 30kg
+    if (lastWeight <= 0 || zoneRates[lastWeight] === 0) {
+      return null;
+    }
+
     if (weightKg > 30) {
       const bulkRatePerKg = 550; // Approximate rate per kg for bulk shipments
-      rate = zoneRates[30] + (weightKg - 30) * bulkRatePerKg;
+      return zoneRates[30] + (weightKg - 30) * bulkRatePerKg;
     }
+
+    return zoneRates[lastWeight] || null;
   }
 
-  return rate;
+  const rate = zoneRates[matchedWeight];
+  return rate && rate > 0 ? rate : null;
 }

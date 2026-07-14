@@ -18,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { SearchableCombobox } from "@/components/ui/searchable-combobox";
 import { useCart } from "@/context/CartContext";
 import { useLocale } from "@/context/LocaleContext";
-import { useCurrency } from "@/hooks/useCurrency";
+import { formatPrice } from "@/lib/currency";
 import { useUser } from "@/context/UserContext";
 import { UserAddress } from "@/types/user";
 import { CactusItem } from "@/types/content";
@@ -31,6 +31,7 @@ import {
   findOptimalBox,
   CactusPlant,
   PackingDetail,
+  PackingSettings,
 } from "@/lib/packing-algorithm";
 import { generateOrderId } from "@/lib/order-id";
 import {
@@ -90,31 +91,37 @@ function convertCartItemsToPackingPlants(items: CartItem[]): CactusPlant[] {
 function calculateDragonCourierCost(
   items: CartItem[],
   country: string,
-): number {
+  settings?: PackingSettings,
+): number | null {
   const zone = getCountryZone(country.trim());
   if (!zone) {
-    return 0;
+    return null;
   }
 
   const packingItems = convertCartItemsToPackingPlants(items);
 
   let packingResults: PackingDetail[] = [];
   try {
-    const packing = findOptimalBox(packingItems, true);
+    const packing = findOptimalBox(packingItems, true, settings);
     packingResults = Array.isArray(packing) ? packing : [packing];
   } catch {
-    return 0;
+    return null;
   }
 
-  const shippingCost = packingResults.reduce((sum, packing) => {
-    const box = packing.boxSize;
+  let shippingCost = 0;
+  for (const packing of packingResults) {
+    const box = packing.shippingBox;
     const boxVolumetricWeight = calculateVolumetricWeight(
       box.widthCm,
       box.lengthCm,
       box.heightCm,
     );
-    return sum + getShippingCostByZone(zone, boxVolumetricWeight);
-  }, 0);
+    const rate = getShippingCostByZone(zone, boxVolumetricWeight);
+    if (rate === null) {
+      return null;
+    }
+    shippingCost += rate;
+  }
 
   return shippingCost;
 }
@@ -123,7 +130,8 @@ function calculateShippingCost(
   items: CartItem[],
   method: "dragonCourier" | "thaiPost",
   country: string,
-): number {
+  settings?: PackingSettings,
+): number | null {
   const isInternational =
     country.trim() !== "" && country.trim() !== THAILAND_COUNTRY;
   const documentFee =
@@ -133,7 +141,8 @@ function calculateShippingCost(
     return 60 + documentFee;
   }
 
-  return calculateDragonCourierCost(items, country) + documentFee;
+  const dragonCost = calculateDragonCourierCost(items, country, settings);
+  return dragonCost === null ? null : dragonCost + documentFee;
 }
 
 export default function CartPage() {
@@ -144,7 +153,7 @@ export default function CartPage() {
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const shippingMethodDefault = "dragonCourier";
   const paymentMethodDefault = "promptPay";
-  const { formatted: totalPriceFormatted } = useCurrency(totalPrice);
+  const totalPriceFormatted = formatPrice(totalPrice, locale);
   const { isAuthenticated, user } = useUser();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -162,6 +171,8 @@ export default function CartPage() {
   const [paymentProofPreview, setPaymentProofPreview] = useState("");
   const [paymentProofUrl, setPaymentProofUrl] = useState("");
   const [isUploadingProof, setIsUploadingProof] = useState(false);
+  const [packingSettings, setPackingSettings] =
+    useState<PackingSettings | null>(null);
   const [note, setNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
@@ -202,12 +213,68 @@ export default function CartPage() {
   };
 
   const isThaiShippingCountry = shippingCountry.trim() === THAILAND_COUNTRY;
+  const isInternationalShipping =
+    shippingCountry.trim() !== "" &&
+    shippingCountry.trim() !== THAILAND_COUNTRY;
+  const documentServiceFee =
+    shippingMethod === "dragonCourier" && isInternationalShipping
+      ? DOCUMENT_SERVICE_FEE
+      : 0;
+
+  const baseShippingCost =
+    shippingMethod === "dragonCourier"
+      ? calculateDragonCourierCost(
+          items as CartItem[],
+          shippingCountry,
+          packingSettings ?? undefined,
+        )
+      : 60;
+
+  const currentShippingCost =
+    baseShippingCost === null ? null : baseShippingCost + documentServiceFee;
+  const currentShippingCostAmount = currentShippingCost ?? 0;
+  const baseShippingCostFormatted =
+    baseShippingCost === null ? "N/A" : formatPrice(baseShippingCost, locale);
+  const currentShippingCostFormatted =
+    currentShippingCost === null
+      ? "N/A"
+      : formatPrice(currentShippingCost, locale);
+
+  const destinationZone =
+    shippingMethod === "dragonCourier" && shippingCountry.trim()
+      ? getCountryZone(shippingCountry.trim())
+      : null;
 
   const canUseDragonCourier = Boolean(
-    shippingCountry.trim() && getCountryZone(shippingCountry.trim()),
+    shippingCountry.trim() &&
+    getCountryZone(shippingCountry.trim()) &&
+    calculateDragonCourierCost(
+      items as CartItem[],
+      shippingCountry,
+      packingSettings ?? undefined,
+    ) !== null,
   );
 
+  const dragonCourierUnavailable =
+    shippingCountry.trim() &&
+    shippingMethod === "dragonCourier" &&
+    currentShippingCost === null;
+
+  const grandTotal = totalPrice + currentShippingCostAmount;
+  const grandTotalFormattedValue = formatPrice(grandTotal, locale);
+
   useEffect(() => {
+    // Load packing settings (non-blocking). If not present, algorithm uses defaults.
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/packing-settings");
+        const data = await res.json().catch(() => ({}));
+        setPackingSettings(data?.data ?? null);
+      } catch (err) {
+        // ignore
+      }
+    })();
+
     if (
       isAuthenticated &&
       defaultAddress &&
@@ -342,20 +409,6 @@ export default function CartPage() {
     setShippingZipcode("");
   };
 
-  const destinationZone =
-    shippingMethod === "dragonCourier" && shippingCountry.trim()
-      ? getCountryZone(shippingCountry.trim())
-      : null;
-  const currentShippingCost = calculateShippingCost(
-    items as CartItem[],
-    shippingMethod as "dragonCourier" | "thaiPost",
-    shippingCountry,
-  );
-  const currentShippingCostFormatted =
-    useCurrency(currentShippingCost).formatted;
-  const grandTotal = totalPrice + currentShippingCost;
-  const grandTotalFormattedValue = useCurrency(grandTotal).formatted;
-
   useEffect(() => {
     if (isAuthenticated && user?.email && !email) {
       setEmail(user.email);
@@ -424,6 +477,13 @@ export default function CartPage() {
       return;
     }
 
+    if (dragonCourierUnavailable) {
+      toast.error(
+        "Dragon Courier cannot calculate a shipping price for this order. Please choose Thai Post.",
+      );
+      return;
+    }
+
     if (
       paymentMethod === "bankTransfer" &&
       !paymentProofFile &&
@@ -454,7 +514,7 @@ export default function CartPage() {
           shippingAddress: shippingAddress.trim(),
           shippingMethod,
           paymentMethod,
-          shippingCost: currentShippingCost,
+          shippingCost: currentShippingCostAmount,
           note: note.trim(),
           totalPrice: grandTotal,
           items: items.map((item) => ({
@@ -487,7 +547,7 @@ export default function CartPage() {
         orderId,
         createdAt: new Date().toISOString(),
         totalPrice: grandTotal,
-        shippingCost: currentShippingCost,
+        shippingCost: currentShippingCostAmount,
         itemCount,
         items: items.map((item) => ({
           id: item.cactus.id,
@@ -647,7 +707,7 @@ export default function CartPage() {
         <div className="lg:col-span-2 space-y-4">
           {items.map((item) => {
             const CartItemPrice = () => {
-              const { formatted } = useCurrency(item.cactus.price);
+              const formatted = formatPrice(item.cactus.price, locale);
               return (
                 <span className="font-display font-bold text-primary">
                   {formatted}
@@ -913,7 +973,7 @@ export default function CartPage() {
                       {method.value === "dragonCourier" &&
                       shippingCountry.trim() &&
                       !canUseDragonCourier
-                        ? " (not available for selected country)"
+                        ? " (not available for selected country or weight)"
                         : ""}
                     </SelectItem>
                   ))}
@@ -923,8 +983,15 @@ export default function CartPage() {
               shippingMethod === "dragonCourier" &&
               !canUseDragonCourier ? (
                 <div className="mt-3 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
-                  Dragon Courier is not available for the selected country. The
-                  shipping method has been switched to Thai Post.
+                  Dragon Courier is not available for the selected country or
+                  the current package weight. The shipping method has been
+                  switched to Thai Post.
+                </div>
+              ) : null}
+              {dragonCourierUnavailable ? (
+                <div className="mt-3 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
+                  Dragon Courier cannot calculate a shipping price for this
+                  order. Please choose Thai Post or reduce the package size.
                 </div>
               ) : null}
             </div>
@@ -1021,8 +1088,22 @@ export default function CartPage() {
             </div>
             <div className="flex justify-between">
               <span>Shipping</span>
-              <span>{currentShippingCostFormatted}</span>
+              <span>{baseShippingCostFormatted}</span>
             </div>
+            {shippingMethod === "dragonCourier" &&
+            isInternationalShipping &&
+            baseShippingCost !== null ? (
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>Fee</span>
+                <span>{formatPrice(documentServiceFee, locale)}</span>
+              </div>
+            ) : null}
+            {dragonCourierUnavailable ? (
+              <div className="mt-1 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
+                Dragon Courier shipping cost could not be calculated for this
+                order.
+              </div>
+            ) : null}
             {shippingMethod === "dragonCourier" && shippingCountry.trim() ? (
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>Destination zone</span>

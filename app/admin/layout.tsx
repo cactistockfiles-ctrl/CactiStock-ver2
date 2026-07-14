@@ -38,6 +38,11 @@ export default function AdminLayout({
       label: "Payment Approval",
       href: "/admin/payment-approval",
     },
+    {
+      key: "packingSettings",
+      label: "Packing Settings",
+      href: "/admin/packing-settings",
+    },
   ];
 
   const [pendingCount, setPendingCount] = useState(0);

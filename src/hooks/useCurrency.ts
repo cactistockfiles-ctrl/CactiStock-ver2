@@ -1,4 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+"use client";
+
+import { useEffect, useState } from "react";
 import { useLocale } from "@/context/LocaleContext";
 import { LOCALE_CURRENCIES, convertCurrency, formatCurrency } from "@/lib/currency";
 
@@ -6,20 +8,33 @@ export function useCurrency(amount: number) {
   const { locale } = useLocale();
   const toCurrency = LOCALE_CURRENCIES[locale] || "THB";
 
-  const { data: convertedAmount, isLoading } = useQuery({
-    queryKey: ["currency", amount, toCurrency],
-    queryFn: () => convertCurrency(amount, "THB", toCurrency),
-    staleTime: 60 * 60 * 1000, // 1 hour
-  });
+  const [convertedAmount, setConvertedAmount] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const formatted = formatCurrency(
-    convertedAmount || amount,
-    toCurrency,
-    locale,
-  );
+  useEffect(() => {
+    let mounted = true;
+    setIsLoading(true);
+    convertCurrency(amount, "THB", toCurrency)
+      .then((v) => {
+        if (mounted) setConvertedAmount(v);
+      })
+      .catch(() => {
+        if (mounted) setConvertedAmount(amount);
+      })
+      .finally(() => {
+        if (mounted) setIsLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [amount, toCurrency]);
+
+  const finalAmount = convertedAmount ?? amount;
+
+  const formatted = formatCurrency(finalAmount, toCurrency, locale);
 
   return {
-    convertedAmount: convertedAmount || amount,
+    convertedAmount: finalAmount,
     formatted,
     isLoading,
     currency: toCurrency,

@@ -96,12 +96,12 @@ const Navbar = () => {
           {isAuthenticated ? (
             <Link
               href={`/${locale}/cart`}
-              className="relative flex items-center justify-center rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 w-10 h-10 md:px-4 md:py-2 md:w-auto md:h-auto md:gap-2"
+              className="relative flex h-12 w-12 items-center justify-center rounded-full text-cactus-700 transition duration-200 ease-in-out hover:bg-cactus-100 hover:text-cactus-900"
+              aria-label={t("nav.cart")}
             >
-              <ShoppingCart className="h-4 w-4" />
-              <span className="hidden md:inline">{t("nav.cart")}</span>
+              <ShoppingCart className="h-6 w-6" />
               {totalItems > 0 && (
-                <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-xs font-bold text-accent-foreground">
+                <span className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-cactus-700 text-[10px] font-bold leading-none text-center text-white shadow-sm ring-2 ring-white">
                   {totalItems}
                 </span>
               )}

@@ -77,3 +77,8 @@ export function formatCurrency(amount: number, currency: string, locale: string)
     currency: currency,
   }).format(amount);
 }
+
+export function formatPrice(amount: number, locale: string): string {
+  const toCurrency = LOCALE_CURRENCIES[locale] || "THB";
+  return formatCurrency(amount, toCurrency, locale);
+}

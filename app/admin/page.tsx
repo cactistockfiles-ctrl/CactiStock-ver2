@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import PackingSettingsPage from "./packing-settings/page";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -123,8 +124,6 @@ type CactusRequiredErrors = {
   name: boolean;
   growType: boolean;
   sizeCm: boolean;
-  widthCm: boolean;
-  lengthCm: boolean;
   heightCm: boolean;
   price: boolean;
 };
@@ -135,8 +134,6 @@ const emptyCactusRequiredErrors: CactusRequiredErrors = {
   name: false,
   growType: false,
   sizeCm: false,
-  widthCm: false,
-  lengthCm: false,
   heightCm: false,
   price: false,
 };
@@ -442,7 +439,14 @@ export default function AdminPage() {
   const router = useRouter();
   const pathname = usePathname();
   const [tab, setTab] = useState<
-    "heroes" | "catalogue" | "blogs" | "news" | "orders" | "sold" | "info"
+    | "heroes"
+    | "catalogue"
+    | "blogs"
+    | "news"
+    | "orders"
+    | "sold"
+    | "info"
+    | "packing-settings"
   >("heroes");
   const [adminLang, setAdminLang] = useState<"th" | "en">("th");
 
@@ -459,6 +463,7 @@ export default function AdminPage() {
       news: "news",
       orders: "orders",
       info: "info",
+      "packing-settings": "packing-settings",
       sold: "sold",
     };
     const newTab = map[seg] ?? "heroes";
@@ -515,6 +520,7 @@ export default function AdminPage() {
     { key: "blogs", label: t.blog },
     { key: "news", label: t.news },
     { key: "orders", label: "Orders" },
+    { key: "packing-settings", label: "Packing Settings" },
     { key: "info", label: t.info || "Info" },
     { key: "sold", label: t.updateStatus },
   ];
@@ -642,24 +648,55 @@ export default function AdminPage() {
         fetch("/api/admin/about"),
       ]);
 
-    if (
-      [cactiRes, blogsRes, heroesRes, newsRes, ordersRes].some(
-        (x) => x.status === 401,
-      )
-    ) {
+    const isRedirectedToLogin = [
+      cactiRes,
+      blogsRes,
+      heroesRes,
+      newsRes,
+      ordersRes,
+      aboutRes,
+    ].some((res) => res.redirected || res.url.endsWith("/admin/login"));
+    if (isRedirectedToLogin) {
       router.push("/admin/login");
       return;
     }
+
+    const validateJsonResponse = async (res: Response, label: string) => {
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Failed to load ${label}: ${res.status} ${errorText}`);
+      }
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        const bodyText = await res.text();
+        throw new Error(
+          `Expected JSON from ${label} but got ${res.status} ${contentType}: ${bodyText}`,
+        );
+      }
+      return res;
+    };
+
+    await validateJsonResponse(cactiRes, "cacti");
+    await validateJsonResponse(blogsRes, "blogs");
+    await validateJsonResponse(heroesRes, "heroes");
+    await validateJsonResponse(newsRes, "news");
 
     setCacti(await cactiRes.json());
     setBlogs(await blogsRes.json());
     setHeroes((await heroesRes.json()).map(normalizeHeroFormValue));
     setNews(await newsRes.json());
-    const ordersData = ordersRes.ok ? await ordersRes.json() : { orders: [] };
+
+    const ordersData = ordersRes.ok
+      ? await validateJsonResponse(ordersRes, "orders").then((res) =>
+          res.json(),
+        )
+      : { orders: [] };
     setOrders(ordersData.orders || []);
 
     if (aboutRes.ok) {
-      const aboutData = await aboutRes.json();
+      const aboutData = await validateJsonResponse(aboutRes, "about").then(
+        (res) => res.json(),
+      );
       setAboutForm(aboutData);
     }
   }, [router]);
@@ -740,14 +777,6 @@ export default function AdminPage() {
         cactusForm.growType === "seed" || cactusForm.growType === "graft"
       ),
       sizeCm: !Number.isFinite(cactusForm.sizeCm) || cactusForm.sizeCm <= 0,
-      widthCm:
-        !cactusForm.widthCm ||
-        !Number.isFinite(cactusForm.widthCm) ||
-        cactusForm.widthCm <= 0,
-      lengthCm:
-        !cactusForm.lengthCm ||
-        !Number.isFinite(cactusForm.lengthCm) ||
-        cactusForm.lengthCm <= 0,
       heightCm:
         !cactusForm.heightCm ||
         !Number.isFinite(cactusForm.heightCm) ||
@@ -776,6 +805,8 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...cactusForm,
+          widthCm: cactusForm.sizeCm,
+          lengthCm: cactusForm.heightCm,
           nameTranslations,
           descriptionTranslations,
           createdAt: cactusForm.createdAt || new Date().toISOString(),
@@ -1179,9 +1210,12 @@ export default function AdminPage() {
             >
               <h2 className="font-semibold">{t.addEditCactus}</h2>
               <div className="space-y-2">
-                <FloatingInput
-                  label="1. ID"
-                  invalid={cactusRequiredErrors.id}
+                <label
+                  className={`text-sm font-medium ${cactusRequiredErrors.id ? "text-destructive" : "text-foreground"}`}
+                >
+                  1. ID
+                </label>
+                <Input
                   value={cactusForm.id}
                   onChange={(e) => {
                     setCactusRequiredErrors((prev) => ({ ...prev, id: false }));
@@ -1192,35 +1226,17 @@ export default function AdminPage() {
               </div>
 
               <div className="space-y-2">
-                <label
-                  className={`text-sm font-medium ${cactusRequiredErrors.family ? "text-destructive" : ""}`}
-                >
-                  2. family name
-                </label>
+                <label className="text-sm font-medium">2. Family</label>
                 <select
-                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                  value={familySelectValue}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={cactusForm.family}
                   onChange={(e) => {
-                    const value = e.target.value;
                     setCactusRequiredErrors((prev) => ({
                       ...prev,
                       family: false,
                     }));
-                    if (value === "__other__") {
-                      const nextFamily = cactusFamilyOptions.includes(
-                        cactusForm.family as (typeof cactusFamilyOptions)[number],
-                      )
-                        ? ""
-                        : cactusForm.family;
-                      setCactusForm({ ...cactusForm, family: nextFamily });
-                      return;
-                    }
-
-                    setCactusForm({
-                      ...cactusForm,
-                      family: value,
-                      name: "",
-                    });
+                    const value = e.target.value;
+                    setCactusForm({ ...cactusForm, family: value, name: "" });
                   }}
                 >
                   <option value="" disabled>
@@ -1301,9 +1317,12 @@ export default function AdminPage() {
               </div>
 
               <div className="space-y-2">
-                <FloatingInput
-                  label={`5. ${t.sizeCm}`}
-                  invalid={cactusRequiredErrors.sizeCm}
+                <label
+                  className={`text-sm font-medium ${cactusRequiredErrors.sizeCm ? "text-destructive" : "text-foreground"}`}
+                >
+                  5. ขนาดเส้นผ่านศูนย์กลาง
+                </label>
+                <Input
                   type="number"
                   min={0}
                   value={cactusForm.sizeCm || ""}
@@ -1318,65 +1337,21 @@ export default function AdminPage() {
                     });
                   }}
                 />
-              </div>
-
-              <div className="space-y-2">
-                {cactusRequiredErrors.widthCm && (
-                  <span className="text-red-500">***</span>
-                )}
-                <FloatingInput
-                  label="6. width"
-                  invalid={cactusRequiredErrors.widthCm}
-                  type="number"
-                  min={0}
-                  value={cactusForm.widthCm ?? ""}
-                  onChange={(e) => {
-                    setCactusRequiredErrors((prev) => ({
-                      ...prev,
-                      widthCm: false,
-                    }));
-                    setCactusForm({
-                      ...cactusForm,
-                      widthCm: e.target.value
-                        ? Number(e.target.value)
-                        : undefined,
-                    });
-                  }}
-                />
-              </div>
-
-              <div className="space-y-2">
-                {cactusRequiredErrors.lengthCm && (
-                  <span className="text-red-500">***</span>
-                )}
-                <FloatingInput
-                  label="7. length"
-                  invalid={cactusRequiredErrors.lengthCm}
-                  type="number"
-                  min={0}
-                  value={cactusForm.lengthCm ?? ""}
-                  onChange={(e) => {
-                    setCactusRequiredErrors((prev) => ({
-                      ...prev,
-                      lengthCm: false,
-                    }));
-                    setCactusForm({
-                      ...cactusForm,
-                      lengthCm: e.target.value
-                        ? Number(e.target.value)
-                        : undefined,
-                    });
-                  }}
-                />
+                <p className="text-xs text-muted-foreground">
+                  ขนาดเส้นผ่านศูนย์กลางของต้น ไม่รวมกระถางและดิน
+                </p>
               </div>
 
               <div className="space-y-2">
                 {cactusRequiredErrors.heightCm && (
                   <span className="text-red-500">***</span>
                 )}
-                <FloatingInput
-                  label="8. height"
-                  invalid={cactusRequiredErrors.heightCm}
+                <label
+                  className={`text-sm font-medium ${cactusRequiredErrors.heightCm ? "text-destructive" : "text-foreground"}`}
+                >
+                  6. ความสูงรวมราก (ซม.)
+                </label>
+                <Input
                   type="number"
                   min={0}
                   value={cactusForm.heightCm ?? ""}
@@ -1393,30 +1368,18 @@ export default function AdminPage() {
                     });
                   }}
                 />
-              </div>
-
-              <div className="space-y-2 flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="hasSpines"
-                  checked={cactusForm.hasSpines}
-                  onChange={(e) => {
-                    setCactusForm({
-                      ...cactusForm,
-                      hasSpines: e.target.checked,
-                    });
-                  }}
-                  className="rounded border-input"
-                />
-                <label htmlFor="hasSpines" className="text-sm font-medium">
-                  9. Has Spines
-                </label>
+                <p className="text-xs text-muted-foreground">
+                  ความสูงรวมราก หลังถอดกระถางและดิน
+                </p>
               </div>
 
               <div className="space-y-2">
-                <FloatingInput
-                  label={`10. ${t.price}`}
-                  invalid={cactusRequiredErrors.price}
+                <label
+                  className={`text-sm font-medium ${cactusRequiredErrors.price ? "text-destructive" : "text-foreground"}`}
+                >
+                  7. ราคา
+                </label>
+                <Input
                   type="number"
                   min={0}
                   value={cactusForm.price || ""}
@@ -1431,6 +1394,26 @@ export default function AdminPage() {
                     });
                   }}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="hasSpines"
+                    checked={cactusForm.hasSpines}
+                    onChange={(e) => {
+                      setCactusForm({
+                        ...cactusForm,
+                        hasSpines: e.target.checked,
+                      });
+                    }}
+                    className="h-5 w-5 rounded-md border border-input text-primary focus:ring-2 focus:ring-primary"
+                  />
+                  <label htmlFor="hasSpines" className="text-sm font-medium">
+                    8. มีหนาม
+                  </label>
+                </div>
               </div>
 
               <FloatingTextarea
@@ -1620,6 +1603,12 @@ export default function AdminPage() {
                   ))}
               </div>
             </div>
+          </div>
+        )}
+
+        {tab === "packing-settings" && (
+          <div className="max-w-3xl mx-auto">
+            <PackingSettingsPage />
           </div>
         )}
 
@@ -2692,13 +2681,15 @@ export default function AdminPage() {
                       selectedPacking.map((packing, index) => (
                         <div key={index} className="space-y-3">
                           <div className="text-sm font-medium">
-                            Box {packing.boxSize.name} •{" "}
-                            {packing.boxSize.widthCm}x{packing.boxSize.lengthCm}
-                            x{packing.boxSize.heightCm} cm
+                            Box {packing.shippingBox.name} •{" "}
+                            {packing.shippingBox.widthCm}x
+                            {packing.shippingBox.lengthCm}x
+                            {packing.shippingBox.heightCm} cm
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            {packing.totalCacti} cacti, {packing.layers.length}{" "}
-                            layer{packing.layers.length > 1 ? "s" : ""}
+                            {packing.totalBoxesPacked} cacti,{" "}
+                            {packing.layers.length} layer
+                            {packing.layers.length > 1 ? "s" : ""}
                           </div>
                           {packing.layers.map((layer) => (
                             <div
@@ -2709,8 +2700,8 @@ export default function AdminPage() {
                                 Layer {layer.layerNumber}
                               </div>
                               <div className="mt-2 text-sm">
-                                {layer.cactiInLayer
-                                  .map((plant) => plant.name)
+                                {layer.placements
+                                  .map((p) => p.plantName)
                                   .join(", ")}
                               </div>
                             </div>
@@ -2720,13 +2711,13 @@ export default function AdminPage() {
                     ) : (
                       <div className="space-y-3">
                         <div className="text-sm font-medium">
-                          Box {selectedPacking.boxSize.name} •{" "}
-                          {selectedPacking.boxSize.widthCm}x
-                          {selectedPacking.boxSize.lengthCm}x
-                          {selectedPacking.boxSize.heightCm} cm
+                          Box {selectedPacking.shippingBox.name} •{" "}
+                          {selectedPacking.shippingBox.widthCm}x
+                          {selectedPacking.shippingBox.lengthCm}x
+                          {selectedPacking.shippingBox.heightCm} cm
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {selectedPacking.totalCacti} cacti,{" "}
+                          {selectedPacking.totalBoxesPacked} cacti,{" "}
                           {selectedPacking.layers.length} layer
                           {selectedPacking.layers.length > 1 ? "s" : ""}
                         </div>
@@ -2739,8 +2730,8 @@ export default function AdminPage() {
                               Layer {layer.layerNumber}
                             </div>
                             <div className="mt-2 text-sm">
-                              {layer.cactiInLayer
-                                .map((plant) => plant.name)
+                              {layer.placements
+                                .map((p) => p.plantName)
                                 .join(", ")}
                             </div>
                           </div>
